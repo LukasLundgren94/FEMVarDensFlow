@@ -1,0 +1,113 @@
+# Compiled source
+*.o
+*.Plo
+*.Po
+*.lo
+*.la
+*.a
+*.os
+*.pyc
+*.so
+*.pc
+*.pyd
+*.def
+*.dll
+*.exe
+*.dylib
+*compile_commands.json
+dolfin/libdolfin.so*
+*.cache*
+# Ignore files named 'demo'
+demo
+# But keep directories named 'demo'
+
+# Ignore files named exactly 'demo' anywhere (no extension)
+**/demo
+
+# But DO NOT ignore directories named 'demo' (or their contents)
+!**/demo/
+!**/demo/**
+
+*.out*
+*.save*
+*.kcg*
+
+# Temporaries
+*~
+*.swp
+
+# Compressed files
+*.xz
+*.gz
+
+# Data files
+*.pvd
+*.pvtu
+*.pvsm
+*.vtu
+*.h5
+*.xdmf
+*.dat
+*.xml
+*.m
+*.msh
+
+# CMake files
+CMakeCache.txt
+CMakeFiles
+build/
+Makefile
+*.cmake
+
+local
+
+# OS X files
+.DS_Store
+.DS_Store?
+
+# generated files
+nse/src/ufl/*.cpp
+nse/src/ufl/*.h
+mhd/src/ufl/mhd/*.cpp
+mhd/src/ufl/mhd/*.h
+mhd/src/ufl/residual/*.cpp
+mhd/src/ufl/residual/*.h
+varden/src/ac/ufl/*.cpp
+varden/src/ac/ufl/*.h
+varden/src/ac/ufl/*.ufl
+varden/src/ac/ufl/*.cpp
+varden/src/solver/ufl/*.h
+varden/src/solver/ufl/*.ufl
+varden/src/solver/ufl/*.cpp
+varden/src/common/ufl/*.cpp
+varden/src/common/ufl/*.h
+varden/src/common/ufl/*.ufl
+
+varden/tests/manufactured/Norms/
+
+
+nse_ac/src/ac/ufl/*.cpp
+nse_ac/src/ac/ufl/*.h
+nse_ac/src/ac/ufl/*.ufl
+nse_ac/src/ac/ufl/*.cpp
+nse_ac/src/common/ufl/*.cpp
+nse_ac/src/common/ufl/*.h
+nse_ac/src/common/ufl/*.ufl
+core/src/ufl/norm/*.h
+core/src/ufl/norm/*.cpp
+core/src/ufl/norm/*.ufl
+core/src/ufl/pdesmooth/*.cpp
+core/src/ufl/pdesmooth/*.h
+core/src/ufl/pdesmooth/*.ufl
+
+
+nse_ac/src/ac/ufl/*.cpp
+nse_ac/src/ac/ufl/*.h
+nse_ac/src/ac/ufl/*.ufl
+nse_ac/src/ac/ufl/*.cpp
+nse_ac/src/common/ufl/*.cpp
+nse_ac/src/common/ufl/*.h
+nse_ac/src/common/ufl/*.ufl
+
+.vscode/settings.json
+.vscode/c_cpp_properties.json

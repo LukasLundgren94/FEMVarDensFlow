@@ -1,0 +1,72 @@
+{
+  "boundary_conditions": {
+    "slip_penalty": 0.0,
+    "slip_penalty_fn": 0.0
+  },
+  "iterative_solver": {
+    "C_laplace": 1.0,
+    "C_mass": 1e-08,
+    "field0_ksp": "cg",
+    "field0_max_iter": 1,
+    "field0_pc": "bjacobi",
+    "field0_tolerance": 1e-11,
+    "field1_ksp": "cg",
+    "field1_max_iter": 1,
+    "field1_pc": "hypre",
+    "field1_tolerance": 1e-11,
+    "initial_guess_extrapolation": 1,
+    "inner_pc": "bjacobi",
+    "max_solver_iterations": 10000,
+    "monitor_ksp": 0,
+    "number_of_newton_iterations": 1,
+    "schur_type": "UPPER",
+    "solver_tolerance": 1e-07,
+    "upper_pc": "bjacobi",
+    "user_schur": 1
+  },
+  "model_setup": {
+    "constant_density": 0,
+    "demo_type": "channel",
+    "nu": 4000.0,
+    "schmidt_number": 1.0,
+    "visc": "RV_PROJ"
+  },
+  "output_diagnostics": {
+    "P3_visualization": 0,
+    "smoothing_weight": 0.0,
+    "t_avg_start": 0.1,
+    "t_save": 1.82574185835,
+    "t_save_checkpoint": 10.0
+  },
+  "spatial_discretization": {
+    "PolDegree": 3,
+    "PolDegree_Q": 2,
+    "PolDegree_V_M": 3,
+    "n_points": 10
+  },
+  "stabilization": {
+    "C_R": 8.0,
+    "C_brezzi": 0.0,
+    "C_flat": 4.0,
+    "C_max": 0.0,
+    "emac_pressure_shift": 0.5,
+    "gamma_grad_div": 0.0,
+    "normalization_eps": 1e-10,
+    "remove_pressure_average": 1,
+    "remove_rho_average": 0,
+    "res_scaling_C_l": 1.0,
+    "residual_BDF": 3,
+    "rv_gamma": 2.0,
+    "rv_smoothing_weight": 1.0,
+    "skew_factor": 1.0,
+    "skew_rho_factor": 0.0
+  },
+  "time_integration": {
+    "CFL": 0.2,
+    "T": 18.2574185835,
+    "bdf_init_factor": 1.0,
+    "s_max": 1.02,
+    "s_min": 0.99,
+    "time_order": 4
+  }
+}

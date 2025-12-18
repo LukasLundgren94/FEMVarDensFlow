@@ -1,0 +1,197 @@
+# Copyright (c) 2022-2025 Lukas Lundgren
+# Licensed under the MIT License – see the LICENSE file for details
+
+dim = cell.topological_dimension()
+if cell == triangle:
+    dim = 2
+elif cell == tetrahedron:
+    dim = 3
+
+# Function spaces
+V = VectorElement("Lagrange", cell, degree_V_M)
+Q = FiniteElement("Lagrange", cell, degree_Q)
+Q_F = FiniteElement("Lagrange", cell, max(degree_Q - 1, 1))
+M = FiniteElement("Lagrange", cell, degree_Q)
+DG = FiniteElement("Discontinuous Lagrange", cell, 0)
+V_DG0 = VectorElement("Discontinuous Lagrange", cell, 0)
+
+# Trial and test functions
+v = TestFunction(M)
+w = TrialFunction(M)
+
+# State and auxiliary fields
+u = Coefficient(V)
+u_t = Coefficient(V)
+p = Coefficient(Q)
+
+rho = Coefficient(M)
+rho_t = Coefficient(M)
+T = Coefficient(M)
+T_F = Coefficient(M)
+S = Coefficient(M)
+S_F = Coefficient(M)
+T_t = Coefficient(M)
+
+f = VectorConstant(cell)
+f_T = VectorConstant(cell)
+f_S = VectorConstant(cell)
+f_man = Coefficient(V)
+f_reaction = Coefficient(M)
+f_source = Coefficient(M)
+
+# Geometry helpers
+h_grad_phi = Coefficient(V_DG0)
+sqrt_h = as_vector([sqrt(h_grad_phi[i]) for i in range(dim)])
+diag_h = diag(h_grad_phi)
+diag_sqrt_h = diag(sqrt_h)
+diag_sqrt_h_M = diag(sqrt_h) * sqrt(degree_V_M / degree_Q)
+diag_h_M = diag_h * degree_V_M / degree_Q
+norm_h = sqrt(inner(h_grad_phi, h_grad_phi))
+norm_h_M = sqrt(inner(h_grad_phi * degree_V_M / degree_Q, h_grad_phi * degree_V_M / degree_Q))
+
+# Stabilisation parameters
+C_res_rho = Constant(cell)
+C_res_u = Constant(cell)
+C_res_T = Constant(cell)
+C_R = Constant(cell)
+kappa_T = Constant(cell)
+kappa = Constant(cell)
+nu = Constant(cell)
+gamma = Constant(cell)
+weight = Constant(cell)
+eps_division = Constant(cell)
+Norm_k_inf = Constant(cell)
+Norm_mom_inf = Constant(cell)
+Norm_u_inf = Constant(cell)
+Norm_T_u_inf = Constant(cell)
+threshold = Constant(cell)
+eps = 1e-20 
+
+# Miscellaneous coefficients
+x = SpatialCoordinate(cell)
+emac_shift = Constant(cell)
+C_skew_rho_factor = Constant(cell)
+rho_K = Coefficient(DG)
+
+m = u * rho
+m_t = u_t * rho + rho_t * u
+
+
+def coordinate_dot(vec):
+    return sum(vec[i] * x[i] for i in range(dim))
+
+gradU_scaled = diag_sqrt_h * grad(u) * diag_sqrt_h
+gradU_l2_h_scaled = 0
+for i in range(dim):
+    gradU_i = 0
+    for j in range(dim):
+        gradU_i += gradU_scaled[i,j] * gradU_scaled[i,j] # pow(Dx(u[i], j), 2)
+    gradU_l2_h_scaled += gradU_i
+gradU_l2 = sqrt(inner(grad(u), grad(u)))
+gradU_l2_h_scaled = sqrt(gradU_l2_h_scaled)
+
+
+division = gradU_l2
+division_max = Norm_u_inf * eps_division / (eps + norm_h)
+division_max = conditional(ge(division_max, division), division_max, division)
+division = conditional(ge(gradU_l2_h_scaled, threshold), division, division_max)
+
+R_div = C_res_u * abs(div(u)) / (eps + division)
+
+gRho = grad(rho)
+gT = grad(T)
+
+gRho_l2 = sqrt(dot(gRho, gRho))
+gT_l2 = sqrt(dot(gT, gT))
+u_l2 = sqrt(dot(u, u))
+
+gRho_l2_h_scaled = sqrt(dot(diag_sqrt_h_M*gRho, diag_sqrt_h_M*gRho))
+gT_l2_h_scaled = sqrt(dot(diag_sqrt_h_M*gT, diag_sqrt_h_M*gT))
+
+adv = u_l2 * gRho_l2
+adv_T = u_l2 * gT_l2
+
+R_rho_div = abs(rho_t) + adv
+R_rho_div_max = Norm_mom_inf * eps_division / (eps + norm_h_M)
+R_rho_div_max = conditional(ge(R_rho_div, R_rho_div_max), R_rho_div, R_rho_div_max)
+R_rho_div = conditional(ge(gRho_l2_h_scaled , threshold), R_rho_div, R_rho_div_max)
+
+R_rho = C_res_rho * abs(rho_t + dot(u, grad(rho))) / (eps + R_rho_div)
+
+R = conditional(ge(R_div, R_rho), R_div, R_rho)
+
+diffusive_term = div(kappa_T * grad(T))
+R_T_div = abs(T_t) + adv_T + abs(diffusive_term) + abs(f_source) + abs(f_reaction * T)
+R_T_div_max = Norm_T_u_inf * eps_division / (eps + norm_h_M)
+R_T_div_max = conditional(ge(R_T_div, R_T_div_max), R_T_div, R_T_div_max)
+R_T_div = conditional(ge(gT_l2_h_scaled , threshold), R_T_div, R_T_div_max)
+
+R_T = C_res_T * abs(T_t + dot(u, grad(T)) + f_source + f_reaction * T - diffusive_term) / (eps + R_T_div)
+R = conditional(ge(R, R_T), R, R_T)
+
+laplacian = div(nu * rho * (nabla_grad(u) + nabla_grad(u).T) + outer(kappa * grad(rho), u))
+
+adv_mom = (
+    grad(m) * u
+    + emac_shift * (nabla_grad(m) * u + nabla_grad(u) * m)
+    + 0.5 * C_skew_rho_factor * (nabla_grad(rho_K * u) * u + nabla_grad(u) * u * rho_K)
+)
+
+adv_div_mom = 0
+for i in range(dim):
+    gradM_i = 0
+    for j in range(dim):
+        gradM_i += pow(Dx(m[i], j), 2)
+    adv_div_mom += gradM_i
+gradM_l2 = sqrt(adv_div_mom)
+adv_div_mom = (1 + 2 * emac_shift + C_skew_rho_factor) * gradM_l2 * u_l2
+
+force_shift = (1 - C_skew_rho_factor) * grad(
+    T_F * coordinate_dot(f_T) + S_F * coordinate_dot(f_S) + rho * coordinate_dot(f)
+)
+
+R_m = 0
+for i in range(dim):
+    residual = (
+        m_t[i]
+        + adv_mom[i]
+        + Dx(p, i)
+        - rho * f[i]
+        - f_man[i]
+        - laplacian[i]
+        - T_F * f_T[i]
+        - S_F * f_S[i]
+        + force_shift[i]
+    )
+    R_m += pow(abs(residual), 2)
+R_m = sqrt(R_m)
+
+R_m_division = (
+    sqrt(dot(m_t, m_t))
+    + adv_div_mom
+    + sqrt(dot(grad(p), grad(p)))
+    + sqrt(rho * rho * dot(f, f))
+    + sqrt(T_F * T_F * dot(f_T, f_T))
+    + sqrt(S_F * S_F * dot(f_S, f_S))
+    + sqrt(dot(f_man, f_man))
+    + sqrt(dot(laplacian, laplacian))
+    + sqrt(dot(force_shift, force_shift))
+)
+
+gradM_h_scaled = diag_sqrt_h*grad(m)*diag_sqrt_h
+gradM_l2_h_scaled = sqrt(inner(gradM_h_scaled, gradM_h_scaled))
+
+
+R_m_division_max = Norm_k_inf * eps_division / (eps + norm_h)
+R_m_division_max = conditional(ge(R_m_division, R_m_division_max), R_m_division, R_m_division_max)
+R_m_division = conditional(ge(gradM_l2_h_scaled, threshold), R_m_division, R_m_division_max)
+
+R_m = C_res_u * R_m / (eps + R_m_division)
+R = conditional(ge(R_m, R), R_m, R)
+
+R = abs(R)
+R = pow(R, gamma)
+R = R * C_R
+
+a = v * w * dx + weight * inner(diag_h_M * diag_h_M * grad(v), grad(w)) * dx
+L = R * v * dx

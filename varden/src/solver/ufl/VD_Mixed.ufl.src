@@ -1,0 +1,537 @@
+# Copyright (c) 2019-2025 Lukas Lundgren
+# Licensed under the MIT License – see the LICENSE file for details
+
+degree_M = degree_Q
+# degree_M = degree_V_M
+
+V = VectorElement("Lagrange", cell, degree_V_M)
+Q = FiniteElement("Lagrange", cell, degree_Q)
+# M = FiniteElement("Lagrange", cell, degree_V_M)
+M = FiniteElement("Lagrange", cell, degree_M)
+DG = FiniteElement("Discontinuous Lagrange", cell, 0)
+VDG = VectorElement("Discontinuous Lagrange", cell, 0)
+V_M = VectorElement("Lagrange",cell,degree_M)
+
+V_tensor = TensorElement("Lagrange",cell,degree_V_M)
+
+
+if (degree_Q - 1) > 0:
+	Q_F = FiniteElement("Lagrange", cell, degree_Q - 1)
+	V_F = VectorElement("Lagrange",cell,degree_Q-1)
+else:
+	Q_F = FiniteElement("Lagrange", cell, 1)
+	V_F = VectorElement("Lagrange",cell,1)
+
+# Define trial and test functions
+u = TrialFunction(V)
+v = TestFunction(V)
+
+p = TrialFunction(Q)
+q = TestFunction(Q)
+
+n = FacetNormal(cell)
+eps = 1e-20
+
+tdim = cell.topological_dimension()
+
+
+def diag_tensor(values, scale):
+    if tdim == 2:
+        a, b = values
+        return scale*as_matrix([[a, 0], [0, b]])
+    a, b, c = values
+    return scale*as_matrix([[a, 0, 0], [0, b, 0], [0, 0, c]])
+
+
+# Define coefficients
+C_mass  = Constant(cell)
+C_laplace  = Constant(cell)
+C_crank_nicolson  = Constant(cell)
+C_BDF3  = Constant(cell)
+C_BDF4  = Constant(cell)
+kappa = Constant(cell)
+
+
+slip_penalty  = Constant(cell)
+slip_penalty_fn  = Constant(cell)
+mom_bar = Coefficient(VDG)
+# mom_bar = Constant(cell)
+
+k  = Constant(cell)
+k0  = Constant(cell)
+k00  = Constant(cell)
+k000  = Constant(cell)
+nu = Constant(cell)
+C_max = Constant(cell)
+C_max_vms = Constant(cell)
+C_directional_wave_speed = Constant(cell)
+C_grad_phi_h = Constant(cell)
+x = SpatialCoordinate(cell)
+
+
+# mu = Coefficient(M)
+vloc = Coefficient(M)
+vloc_x = Coefficient(M)
+vloc_y = Coefficient(M)
+vloc_z = Coefficient(M)
+
+vloc_x_ = (C_directional_wave_speed*vloc_x + (1-C_directional_wave_speed)*vloc)
+vloc_y_ = (C_directional_wave_speed*vloc_y + (1-C_directional_wave_speed)*vloc)
+vloc_z_ = (C_directional_wave_speed*vloc_z + (1-C_directional_wave_speed)*vloc)
+
+res_indicator_u = Coefficient(M)
+res_indicator_rho = Coefficient(M)
+h = Coefficient(V)
+diag_h = diag(h)
+
+norm_h = sqrt(inner(h,h))
+
+diag_h_M = diag_h*degree_V_M/degree_M
+
+# h_diag = diag(h)
+
+
+# vloc_ = conditional(ge(vloc,1),vloc,1)
+
+# We assume that h = h/degree_V_M
+# nu_h = C_max*h*res_indicator_u*vloc
+nu_h_x = sqrt(abs(C_max*res_indicator_u*vloc_x_))
+nu_h_y = sqrt(abs(C_max*res_indicator_u*vloc_y_))
+nu_h_z = sqrt(abs(C_max*res_indicator_u*vloc_z_))
+# nu_h_vms = C_max_vms*h*(1-res_indicator_u)*vloc
+nu_h_vms_x = sqrt(abs(C_max_vms*(1-res_indicator_u)*vloc_x_))
+nu_h_vms_y = sqrt(abs(C_max_vms*(1-res_indicator_u)*vloc_y_))
+nu_h_vms_z = sqrt(abs(C_max_vms*(1-res_indicator_u)*vloc_z_))
+
+kappa_h = abs(C_max*res_indicator_rho*vloc)
+kappa_h_x = abs(C_max*res_indicator_rho*vloc_x_)
+kappa_h_y = abs(C_max*res_indicator_rho*vloc_y_)
+kappa_h_z = abs(C_max*res_indicator_rho*vloc_z_)
+kappa_h_vms = C_max_vms*(1-res_indicator_rho)*degree_V_M/degree_M*vloc
+
+kappa_h_vms_x = C_max_vms*(1-res_indicator_rho)*degree_V_M/degree_M*vloc_x_
+kappa_h_vms_y = C_max_vms*(1-res_indicator_rho)*degree_V_M/degree_M*vloc_y_
+kappa_h_vms_z = C_max_vms*(1-res_indicator_rho)*degree_V_M/degree_M*vloc_z_
+
+if tdim == 2:
+    kappa_h_tensor = diag_tensor((kappa_h_x, kappa_h_y), diag_h_M)
+    kappa_h_vms_tensor = diag_tensor((kappa_h_vms_x, kappa_h_vms_y), diag_h_M)
+    nu_h_tensor = diag_tensor((nu_h_x, nu_h_y), diag_h)
+    nu_h_vms_tensor = diag_tensor((nu_h_vms_x, nu_h_vms_y), diag_h)
+else:
+    kappa_h_tensor = diag_tensor((kappa_h_x, kappa_h_y, kappa_h_z), diag_h_M)
+    kappa_h_vms_tensor = diag_tensor((kappa_h_vms_x, kappa_h_vms_y, kappa_h_vms_z), diag_h_M)
+    nu_h_tensor = diag_tensor((nu_h_x, nu_h_y, nu_h_z), diag_h)
+    nu_h_vms_tensor = diag_tensor((nu_h_vms_x, nu_h_vms_y, nu_h_vms_z), diag_h)
+
+# possible to change this? Also need to change space of rho, S, T so that it works. Either this works directly
+# or I need to project it in every time-step... 
+f = VectorConstant(cell)#
+f_T = VectorConstant(cell)#
+f_S = VectorConstant(cell)
+
+f_man = Coefficient(V) #FIXME: better name...
+gamma_grad_div = Constant(cell)
+
+p_grad_u = Coefficient(V_tensor)
+p_div_u = Coefficient(M)
+p_grad_rho = Coefficient(V_M)
+
+
+u_n = Coefficient(V)
+u_nm1 = Coefficient(V)
+u_nm2 = Coefficient(V)
+u_nm3 = Coefficient(V)
+
+
+rho_np1 = Coefficient(M)
+rho_n = Coefficient(M)
+T_np1 = Coefficient(M)
+T_n = Coefficient(M)
+S_np1 = Coefficient(M)
+S_n = Coefficient(M)
+
+rho_nm1 = Coefficient(M)
+rho_nm2 = Coefficient(M)
+rho_nm3 = Coefficient(M)
+
+m = u*rho_np1
+
+m0_n = u_n*(rho_n)
+m0_nm1 = u_nm1*(rho_nm1)
+m0_nm2 = u_nm2*(rho_nm2)
+m0_nm3 = u_nm3*(rho_nm3)
+
+slip_marker = Coefficient(M)
+slip_marker_fn = Coefficient(M)
+node_normal = Coefficient(V)
+
+p_n = Coefficient(Q)
+
+
+C_skew_factor = Constant(cell)
+C_skew_rho_factor = Constant(cell)
+
+emac_shift = Constant(cell)
+
+def b_(u, v, w):
+    return inner(grad(v) * u, w) * dx
+
+
+def conv_a(m_s, m, u, u_s, v):
+    return (
+        (emac_shift + 0.5) * (b_(v, u, m_s) + b_(v, u_s, m))
+        + (emac_shift - 0.5) * (b_(v, m, u_s) + b_(v, m_s, u))
+        + b_(u_s, m, v)
+        + b_(u, m_s, v)
+        + C_skew_factor * inner(div(u_s) * m + div(u) * m_s, v) * dx
+        + 0.5 * C_skew_rho_factor
+        * (inner(v, nabla_grad(dot(m_s, u))) + inner(v, nabla_grad(dot(m, u_s)))) * dx
+    )
+
+
+def conv_L(m_s, m, u, u_s, v):
+    return -(
+        (emac_shift + 0.5) * b_(v, u_s, m_s)
+        + (emac_shift - 0.5) * b_(v, m_s, u_s)
+        + b_(u_s, m_s, v)
+        + C_skew_factor * inner(div(u_s) * m_s, v) * dx
+        + 0.5 * C_skew_rho_factor * inner(v, nabla_grad(dot(m_s, u_s))) * dx
+    )
+
+
+
+C_ddn1 = Constant(cell)
+C_ddn2 = Constant(cell)
+
+boundary_function = Coefficient(Q)  # Neumann boundary condition at outflow
+
+
+def directional_do_nothing(u, v, n, u_s, T, S):
+    inflow = conditional(lt(dot(n, u_s), 0), 1, 0)
+    outflow = 1 - inflow
+    boundary = ds(4)
+    penalty = (
+        dot(u_s, n) * dot(u, v)
+        + dot(u, n) * dot(u_s, v)
+        - dot(u_s, n) * dot(u_s, v)
+    )
+    buoyancy = -0.5 * eps * (T * dot(f_T, x) + S * dot(f_S, x)) * dot(n, v) * boundary
+    forcing = boundary_function * dot(n, v) * boundary
+
+    return (
+        -0.5 * C_ddn1 * inflow * penalty * boundary
+        + 0.5 * C_ddn2 * outflow * penalty * boundary
+        - (emac_shift + 0.5 * C_skew_rho_factor) * penalty * boundary
+        + buoyancy
+        + forcing
+    )
+
+
+C_slip_friction = Constant(cell)
+
+
+def friction_velocity(u, u_s, v):
+    u_drag = vloc
+    boundary = ds(1) + ds(2) + ds(3) + ds(8)
+    return -C_slip_friction * (u_drag + 1e-3) * dot(u, v) * boundary
+
+
+def A(u,rho,v):
+	return ( inner(nu*rho*(nabla_grad(u) + nabla_grad(u).T)  , nabla_grad(v) )) + \
+		inner((outer(kappa*grad(rho),u) ),  nabla_grad(v) ) 	
+
+def stabilization(u,rho,v):
+	return (rho*inner( (nu_h_tensor*(nabla_grad(u) + nabla_grad(u).T )*nu_h_tensor)  , nabla_grad(v)   ) )   \
+	+ (inner(outer(dot(kappa_h_tensor,grad(rho)),u) ,  nabla_grad(v)  ) )
+
+def vms(v,rho,u):                       
+	return ( rho*inner( nu_h_vms_tensor*(nabla_grad(u) + nabla_grad(u).T - p_grad_u - p_grad_u.T)*nu_h_vms_tensor   , nabla_grad(v) ) ) \
+	 	+ (inner( outer(dot(kappa_h_vms_tensor,grad(rho)-p_grad_rho),u) ,  nabla_grad(v) )  )
+
+rho_K = Coefficient(DG)
+
+def grad_div(u,v):
+    if tdim == 2:
+        return gamma_grad_div * ((vloc_x * h[0] + vloc_y * h[1]) * rho_np1 * inner(div(u), div(v)) * dx)
+    else:
+        return  gamma_grad_div*((vloc_x*h[0] + vloc_y*h[1] + vloc_z*h[2])*rho_np1*inner(div(u),div(v))*dx)
+
+def Slip(u,v):
+	return slip_penalty*slip_marker*inner(u,node_normal)*inner(v,node_normal)*ds
+
+def Slip_fn(u,v):
+	return slip_penalty_fn*slip_marker_fn*inner(u,n)*inner(v,n)*ds
+
+CN = Constant(cell)
+u_N = Coefficient(V)
+C_brezzi = Constant(cell)
+p_grad_p = Coefficient(V)
+mu_p = k*k
+a11 =C_brezzi*mu_p*inner(grad(p),grad(q))*dx 
+
+b1 = - ( 0.5*div(u_n)*C_crank_nicolson )*q*dx + C_brezzi*mu_p*inner(p_grad_p,grad(q))*dx
+
+a01 = - inner(p,div(v))*dx 
+aSchur = C_mass*p*q*dx + C_laplace*inner(grad(p)/(rho_np1+eps),grad(q))*dx
+
+b0_f = inner( m0_n/k + rho_np1*f + f_T*T_np1 + f_S*S_np1 + f_man  , v)*dx
+
+CN = Constant(cell)
+u_N = Coefficient(V)
+m_N = u_N*rho_np1
+
+# CN
+m_m = 0.5*(m + m0_n)
+u_m = 0.5*(u + u_n)
+rho_m = 0.5*(rho_np1 + rho_n)
+T_m = 0.5*(T_np1 + T_n)
+S_m = 0.5*(S_np1 + S_n)
+
+u_s_cn = 3/2*u_n - 0.5*u_nm1
+
+u_s = 0.5*CN*(u_N + u_n) + (1-CN)*(3/2*u_n - 0.5*u_nm1)
+m_s = 0.5*CN*(m_N + m0_n) + (1-CN)*(3/2*m0_n - 0.5*m0_nm1)
+
+u_s_crank_nicolson = 3/2*u_n - 0.5*u_nm1
+m_s_crank_nicolson = 3/2*m0_n - 0.5*m0_nm1
+rho_s_crank_nicolson = 3/2*rho_n - 0.5*rho_nm1
+m_t_crank_nicolson = (m - m0_n )/(k)
+
+rho_bar = Constant(cell)
+rho_bar_ = eps*rho_bar + rho_K
+
+
+
+
+C_project_uu = Constant(cell)
+
+a10 = ( 0.5*div(u)*C_crank_nicolson + (1 - C_crank_nicolson)*div(u) )*q*dx  
+
+######################################
+
+w_np2 = k/k0
+w_np1 = k0/k00
+
+alfa_0 = -pow(w_np1,3)*pow(w_np2,2)*(1 + w_np2)/ \
+( (1+w_np1)*(1 + w_np1 + w_np1*w_np2) )
+
+alfa_1 = pow(w_np2,2)*( w_np1 + 1/(1 + w_np2) )
+
+alfa_2 = -1 - w_np2 - w_np1*w_np2*(1 + w_np2)/(1 + w_np1)
+
+alfa_3 = 1 + w_np2/(1+w_np2) + w_np1*w_np2/(1 + w_np1*(1+w_np2))
+
+beta_0 = pow(w_np1,2)*w_np2*(1 + w_np2)/(1 + w_np1)
+
+beta_1 = -w_np2*( 1 + w_np1*(1 + w_np2))
+
+beta_2 = (1 + w_np2)*(1 + w_np1*(1 + w_np2))/(1 + w_np1)
+
+
+m_s_bdf3 = beta_2*m0_n + beta_1*m0_nm1 + beta_0*m0_nm2
+u_s_bdf3 = beta_2*u_n + beta_1*u_nm1 + beta_0*u_nm2
+rho_s_bdf3 = beta_2*rho_n + beta_1*rho_nm1 + beta_0*rho_nm2
+m_t_bdf3 = (alfa_3*m + alfa_2*m0_n + alfa_1*m0_nm1 + alfa_0*m0_nm2)/(k)
+
+######################################
+
+w_np3 = k/k0
+w_np2 = k0/k00
+w_np1 = k00/k000
+
+A1 = 1 + w_np1*(1 + w_np2)
+A2 = 1 + w_np2*(1 + w_np3)
+A3 = 1 + w_np1*A2
+
+alfa_0 = (1 + w_np3)/(1 + w_np1)*A2/A1*(pow(w_np1,4)*pow(w_np2,3)*pow(w_np3,2))/A3 
+
+alfa_1 = -pow(w_np2,3)*pow(w_np3,2)*(1 + w_np3)/(1 + w_np2)*A3/A2
+
+alfa_2 = w_np3*( w_np3/(1 + w_np3) + w_np2*w_np3*(A3 + w_np1)/(1 + w_np1) )
+
+alfa_3 = -1 - w_np3*( 1 + w_np2*(1 + w_np3)/(1 + w_np2)*(1 + w_np1*A2/A1)  )
+
+alfa_4 = 1 + w_np3/(1 + w_np3) + w_np2*w_np3/A2 + w_np1*w_np2*w_np3/A3
+
+beta_0 = - pow(w_np1,3)*pow(w_np2,2)*w_np3*(1 + w_np3)/(1 + w_np1)*A2/A1
+
+beta_1 = pow(w_np2,2)*w_np3*(1 + w_np3)/(1 + w_np2)*A3
+
+beta_2 = -A2*A3*w_np3/(1 + w_np1)
+
+beta_3 = w_np2*(1 + w_np3)/(1 + w_np2)*( (1 + w_np3)*(A3 + w_np1) + (1 + w_np1)/w_np2 )/A1
+
+u_s_bdf4 = beta_3*u_n + beta_2*u_nm1 + beta_1*u_nm2 + beta_0*u_nm3
+rho_s_bdf4 = beta_3*rho_n + beta_2*rho_nm1 + beta_1*rho_nm2 + beta_0*rho_nm3
+m_s_bdf4 = beta_3*m0_n + beta_2*m0_nm1 + beta_1*m0_nm2 + beta_0*m0_nm3
+m_t_bdf4 = (alfa_4*m + alfa_3*m0_n + alfa_2*m0_nm1 + alfa_1*m0_nm2 + alfa_0*m0_nm3)/(k)
+
+u_s = CN*u_N*(1-C_crank_nicolson) + CN*C_crank_nicolson*(0.5*u_N + 0.5*u_n) + (1-CN)*(C_BDF4*u_s_bdf4 + C_BDF3*u_s_bdf3 + C_crank_nicolson*u_s_crank_nicolson)
+m_t = C_BDF4*m_t_bdf4 + C_BDF3*m_t_bdf3 + C_crank_nicolson*m_t_crank_nicolson
+m_s = CN*m_N*(1-C_crank_nicolson) + CN*C_crank_nicolson*(0.5*m_N + 0.5*m0_n) + (1-CN)*(C_BDF4*m_s_bdf4 + C_BDF3*m_s_bdf3 + C_crank_nicolson*m_s_crank_nicolson)
+rho_s = CN*rho_np1*(1-C_crank_nicolson) + CN*C_crank_nicolson*(0.5*rho_np1 + 0.5*rho_n) + (1-CN)*(C_BDF4*rho_s_bdf4 + C_BDF3*rho_s_bdf3 + C_crank_nicolson*rho_s_crank_nicolson)
+m_ = C_crank_nicolson*m_m + (1 - C_crank_nicolson)*m
+u_ = C_crank_nicolson*u_m + (1 - C_crank_nicolson)*u
+rho_ = C_crank_nicolson*rho_m + (1 - C_crank_nicolson)*rho_np1
+T_ = C_crank_nicolson*T_m + (1 - C_crank_nicolson)*T_np1
+S_ = C_crank_nicolson*S_m + (1 - C_crank_nicolson)*S_np1
+
+
+C_omega = Constant(cell)
+e_z = as_vector([0, 0, 1])
+e_y = as_vector([0, 1, 0])
+
+
+
+# omega_curl = C_omega*inner(as_vector([-u_[1],u_[0]]),v)*dx
+
+# coriolis = C_omega*dot(as_vector([-u_[1],u_[0]]),v)*dx
+if tdim == 2:
+    coriolis = C_omega*dot(as_vector([-u_[1], u_[0]]), v)*dx
+else:
+    coriolis = inner(C_omega*cross(e_y, u_), v)*dx
+
+
+
+
+# Warning: because of rho_-rho_bar_, make sure we set remove_rho_average=1
+
+force_shift = T_ * dot(f_T, x) + S_ * dot(f_S, x) + rho_ * dot(f, x)
+
+uu_projected = Coefficient(M)
+UU_ = uu_projected * C_project_uu + (1 - C_project_uu) * (2 * dot(u_s, u_) - dot(u_s, u_s))
+
+skew_rho = 0.5 * (
+    inner(grad(rho_) * (2 * dot(u_s, u_) - dot(u_s, u_s)), v) * dx
+    + C_skew_rho_factor * div(v) * (rho_ - rho_bar_) * UU_ * dx
+)
+
+body_force = inner(rho_ * f + f_T * T_ + f_S * S_ + f_man, v) * dx
+
+noslip_bad_cells = 1e15*inner(u,v)*dx(1)
+
+eq = (
+    inner(m_t, v) * dx
+    + conv_a(m_s, m_, u_, u_s, v)
+    + conv_L(m_s, m_, u_, u_s, v)
+    + skew_rho
+    + A(u_, rho_, v) * dx
+    + stabilization(u_, rho_, v) * dx
+    + vms(v, rho_, u_) * dx
+    + grad_div(u_, v)
+    + directional_do_nothing(u_, v, n, u_s, T_, S_)
+    + friction_velocity(u_, u_s, v)
+    - body_force
+    - (1 - C_skew_rho_factor) * force_shift * div(v) * dx
+    + coriolis + noslip_bad_cells
+)
+
+a00 = lhs(eq)
+b0 = rhs(eq)
+
+######################################
+
+V_DG0 = VectorElement("Discontinuous Lagrange", cell, 0)
+
+# Define trial and test functions
+h_PX = TrialFunction(V)
+v = TestFunction(V)
+weight = Constant(cell)
+h_grad_phi = Coefficient(V_DG0)
+
+if tdim == 2:
+    h_DG0 = sqrt(CellVolume(cell)) / degree_V_M
+    h_vector = as_vector([1 / (h_grad_phi[0] + eps), 1 / (h_grad_phi[1] + eps)])
+    h_DG0_vector = as_vector([h_DG0, h_DG0])
+else:
+    h_DG0 = pow(CellVolume(cell), 1 / 3) / degree_V_M
+    h_vector = as_vector([
+        1 / (h_grad_phi[0] + eps),
+        1 / (h_grad_phi[1] + eps),
+        1 / (h_grad_phi[2] + eps),
+    ])
+    h_DG0_vector = as_vector([h_DG0, h_DG0, h_DG0])
+
+h_vector = h_vector / degree_V_M
+h_tensor = diag(h_vector)
+
+
+mesh_size_boundary_weight = Constant(cell)
+a_h = inner(h_PX, v)*dx + mesh_size_boundary_weight*inner(h_PX, v)*ds + (1-C_grad_phi_h)*weight*h_DG0*h_DG0*inner(grad(h_PX),grad(v))*dx \
+ + C_grad_phi_h*weight*inner(h_tensor*(grad(h_PX)+ grad(h_PX).T)*h_tensor, grad(v))*dx
+L_h = (1-C_grad_phi_h)*inner(h_DG0_vector,v)*dx + mesh_size_boundary_weight*(1-C_grad_phi_h)*inner(h_DG0_vector,v)*ds \
+    + C_grad_phi_h*inner(h_vector,v)*dx + mesh_size_boundary_weight*C_grad_phi_h*inner(h_vector,v)*ds
+
+
+rho_bar_K = TrialFunction(DG)
+w = TestFunction(DG)
+C_jump = Constant(cell)
+# h_DG0 = sqrt(CellVolume(cell))
+a_proj = rho_bar_K*w*dx + C_jump/avg(h_DG0)*dot(jump(rho_bar_K,n),jump(w,n))*dS \
+ + C_jump*2/(h_DG0)*rho_bar_K*w*ds
+L_proj = rho_np1*w*dx + eps*rho_np1*w*ds + C_jump*2/(h_DG0)*rho_np1*w*ds
+
+
+mom_bar_K = TrialFunction(VDG)
+w = TestFunction(VDG)
+u_np1 = Coefficient(V)
+# h_DG0 = sqrt(CellVolume(cell))
+a_proj_V = dot(mom_bar_K,w)*dx + C_jump/avg(h_DG0)*(jump(mom_bar_K,n)*jump(w,n))*dS \
++ C_jump*2/(h_DG0)*dot(mom_bar_K,w)*ds
+L_proj_V = rho_np1*dot(u_np1,w)*dx + C_jump*2/(h_DG0)*rho_np1*dot(u_np1,w)*ds
+
+
+w = TestFunction(M)
+uu = TrialFunction(M)
+e_i = VectorConstant(cell)
+
+# compute max of u_np1, u_n, u_s
+u_s_bdf2 = (1+w_np3)*u_np1 - w_np3*u_n
+
+max_uu = conditional(gt(sqrt(dot(u_np1,u_np1)), sqrt(dot(u_n,u_n)) ), sqrt(dot(u_np1,u_np1)), sqrt(dot(u_n,u_n)) )
+max_uu = conditional(gt(max_uu, sqrt(dot(u_s_bdf2,u_s_bdf2)) ), max_uu, sqrt(dot(u_s_bdf2,u_s_bdf2)) )
+
+max_u_e_i = conditional(gt(abs(dot(u_np1,e_i)), abs(dot(u_n,e_i)) ), abs(dot(u_np1,e_i)), abs(dot(u_n,e_i)) )
+max_u_e_i = conditional(gt(max_u_e_i, abs(dot(u_s_bdf2,e_i)) ), max_u_e_i, abs(dot(u_s_bdf2,e_i)) )
+
+a_proj_U = uu*w*dx + (1-C_project_uu)*inner(diag_h_M*diag_h_M*grad(uu),grad(w))*weight*dx
+L_proj_U = (1-C_project_uu)*((1-C_directional_wave_speed)*(max_uu) *w*dx + C_directional_wave_speed*max_u_e_i*w*dx) + C_project_uu*(C_crank_nicolson*dot(u_np1, u_n)*w*dx \
++ (1-C_crank_nicolson)*(2*dot(u_s, u_np1) - dot(u_s, u_s))*w*dx)
+
+
+rho_M = Coefficient(M)
+rho_M_n = Coefficient(M)
+C_CN = Constant(cell)
+
+rho_F_trial = TrialFunction(Q_F)
+w_F = TestFunction(Q_F)
+
+# p_grad_rho - isnt so important if it lives in V or V_M, but it is nice if it is similar to Kuzmin
+v = TestFunction(V_M)
+u = TrialFunction(V_M)
+# w = TestFunction(M)
+# rho_s = CN*rho_np1 + (1-CN)*(beta_3*rho_n + beta_2*rho_nm1 + beta_1*rho_nm2 + beta_0*rho_nm3)
+
+rho_LPS = (1-C_crank_nicolson)*rho_s + C_crank_nicolson*(rho_s + rho_n)/2
+
+a_LPS = inner(u,v)*dx
+L_LPS = inner(grad(rho_LPS),v)*dx 
+
+v_tensor = TestFunction(V_tensor)
+u_tensor = TrialFunction(V_tensor)
+
+u_LPS = (1-C_crank_nicolson)*u_s + C_crank_nicolson*(u_s + u_n)/2
+
+a_LPS_tensor = inner(u_tensor,v_tensor)*dx
+L_LPS_tensor = inner(nabla_grad(u_LPS),v_tensor)*dx
+
+rho = TrialFunction(M)
+w = TestFunction(M)
+a_flux = inner(rho,w)*ds + inner(rho,w)*dx + weight*inner(diag_h_M*diag_h_M*nabla_grad(rho),nabla_grad(w))*dx
+
+min_u = 1e-20
+L_flux = inner(dot(node_normal,(kappa_h_tensor)*grad(rho_np1)),w)*ds(1)
+
+
+forms = [a00,a01,a10, a11, b0, b1, aSchur, a_h, L_h, a_proj, L_proj, a_proj_V, L_proj_V, a_proj_U, L_proj_U, a_LPS, L_LPS, a_LPS_tensor, L_LPS_tensor,  a_flux, L_flux]

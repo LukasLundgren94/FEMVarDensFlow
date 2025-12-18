@@ -1,0 +1,24 @@
+dim = -1
+if cell ==triangle:
+	dim = 2
+elif cell==tetrahedron:
+	dim = 3
+
+# Define function spaces
+V = VectorElement("Lagrange", cell, degree_V_M)
+# M = FiniteElement("Lagrange", cell, degree_V_M)
+M = FiniteElement("Lagrange", cell, degree_Q)
+
+# Define trial and test functions
+v = TestFunction(M)
+
+# Define coefficients
+u  = Coefficient(V)
+rho  = Coefficient(M)
+
+m = u*rho
+
+cv = CellVolume(cell)
+
+L = 1/cv * ((div(u)))* v * dx
+

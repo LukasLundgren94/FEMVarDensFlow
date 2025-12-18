@@ -1,0 +1,4 @@
+#!/bin/sh
+
+ffc -O -f quadrature_degree=6  -f remove_zero_terms -f ignore_zero_tables  -fcpp_optimize_flags=-O3 -f split  -r uflacs  -f no_ferari -f simplify_expressions -f eliminate_zeros -fno-evaluate_basis -fno-evaluate_basis  -l dolfin $@;
+# -f quadrature_degree=6

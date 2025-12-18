@@ -1,0 +1,32 @@
+# Copyright (C) 2020 Murtazo Nazarov
+# Copyright (C) 2025 Lukas Lundgren
+# Licensed under the MIT License – see the LICENSE file for details
+#------------------------------------------------
+# UFL definition 
+
+Q = FiniteElement("Lagrange", cell, degree_cg)
+V = VectorElement("Lagrange", cell, degree_cg)
+Vp1 = VectorElement("Lagrange", cell, degree_cg+1)
+vDG = VectorElement("Discontinuous Lagrange", cell, 0)
+
+# Dimension of domain
+d = cell.topological_dimension()
+
+v   = TestFunction(Q)
+U   = TrialFunction(Q)
+
+h   = Coefficient(Vp1)
+u   = Coefficient(Q)
+
+weight = Constant(cell)
+
+if d == 2:
+   H = as_matrix( ((h[0]**2, 0), (0, h[1]**2)) )
+elif d == 3:
+   H = as_matrix( ((h[0]**2, 0, 0), (0, h[1]**2, 0), (0, 0, h[2]**2)) )
+
+a = inner(U,v)*dx + weight*inner((H*grad(U)), grad(v))*dx
+L = inner(u,v)*dx
+
+#------------------------------------------------
+

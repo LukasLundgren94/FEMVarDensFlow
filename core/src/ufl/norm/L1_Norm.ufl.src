@@ -1,0 +1,19 @@
+# Copyright (C) 2020 Murtazo Nazarov
+# Licensed under the MIT License – see the LICENSE file for details
+#------------------------------------------------
+# UFL definition 
+
+Q = FiniteElement("Lagrange", cell, degree_cg)
+Q_ex = FiniteElement("Lagrange", cell, degree_cg + 2)
+
+# Dimension of domain
+d = cell.topological_dimension()
+
+u   = Coefficient(Q)
+u_ex   = Coefficient(Q_ex)
+
+err = abs(u-u_ex)
+
+M = err * dx
+#------------------------------------------------
+

@@ -1,0 +1,81 @@
+{
+  "boundary_conditions": {
+    "C_ddn_penalty1": 2.0,
+    "C_ddn_penalty2": 0.0,
+    "slip_penalty": 0.0,
+    "slip_penalty_fn": 0.0
+  },
+  "iterative_solver": {
+    "C_laplace": 1.0,
+    "C_mass": 1e-08,
+    "field0_ksp": "cg",
+    "field0_max_iter": 1,
+    "field0_pc": "bjacobi",
+    "field0_tolerance": 0.0001,
+    "field1_ksp": "cg",
+    "field1_max_iter": 2,
+    "field1_pc": "hypre",
+    "field1_tolerance": 0.1,
+    "initial_guess_extrapolation": 1,
+    "inner_pc": "bjacobi",
+    "max_solver_iterations": 6000,
+    "monitor_ksp": 0,
+    "number_of_newton_iterations": 1,
+    "schur_type": "UPPER",
+    "solver_tolerance": 1e-07,
+    "solver_tolerance_tracer": 1e-10,
+    "solver_tolerance_LPS": 1e-06,
+    "upper_pc": "bjacobi",
+    "user_schur": 1
+  },
+  "model_setup": {
+    "constant_density": 1,
+    "demo_type": "msanufactured",
+    "rayleigh_number": 1000000.0,
+    "schmidt_number": 1e+20,
+    "nu": 1.0e-06,
+    "visc": "RV_PROJ"
+  },
+  "output_diagnostics": {
+    "P3_visualization": 0,
+    "output_file_type": "xdmf",
+    "smoothing_weight": 0.0,
+    "t_avg_start": 0.01,
+    "t_save": 1e-03,
+    "t_save_checkpoint": 0.1e10
+  },
+  "spatial_discretization": {
+    "PolDegree": 3,
+    "PolDegree_Q": 2,
+    "PolDegree_V_M": 3,
+    "n_points": 20
+  },
+  "stabilization": {
+    "C_R": 20.0,
+    "C_brezzi": 0.0,
+    "C_flat": 1.0,
+    "C_max": 2.0,
+    "C_max_vms": 0.05,
+    "directional_wave_speed": 1,
+    "emac_pressure_shift": 0.25,
+    "gamma_grad_div": 1.0,
+    "normalization_eps": 1e-10,
+    "project_uu": 0,
+    "remove_pressure_average": 1,
+    "remove_rho_average": 1,
+    "res_scaling_C_l": 1.0,
+    "residual_BDF": 3,
+    "rv_gamma": 2.0,
+    "rv_smoothing_weight": 3.0,
+    "skew_factor": 1.0,
+    "skew_rho_factor": 0.5
+  },
+  "time_integration": {
+    "CFL": 0.2,
+    "T": 1.0,
+    "bdf_init_factor": 0.001,
+    "s_max": 1.01,
+    "s_min": 0.95,
+    "time_order": 2
+  }
+}

@@ -1,0 +1,28 @@
+# Copyright (c) 2024-2025 Lukas Lundgren
+
+
+degree_M = degree_Q
+
+domain = Cell("interval",geometric_dimension=2) # Thank you Van-Dang Nguyen!!!!
+h = CellVolume(domain)
+
+if (cell==tetrahedron):
+    domain = Cell("triangle",geometric_dimension=3)
+    h = sqrt(CellVolume(domain))
+
+# domain = Cell("interval",geometric_dimension=2) # Thank you Van-Dang Nguyen!!!!
+M_manifold = FiniteElement("Lagrange", domain, degree_M)
+V_manifold = VectorElement("Lagrange", domain, 3)
+# M = FiniteElement("Lagrange", triangle, degree_M)
+
+m = TrialFunction(M_manifold)
+m_ = Coefficient(M_manifold)
+w = TestFunction(M_manifold)
+weight = Constant(domain)
+
+h = h/degree_M
+node_normal = Coefficient(V_manifold)
+u = Coefficient(M_manifold)
+
+a = m*w*dx  + weight*h*h*inner(grad(m), grad(w))*dx#(1) + weight*h*h*dot(grad(m),grad(w))*ds(1) + m*w*ds(1)
+L = m_*w*dx 

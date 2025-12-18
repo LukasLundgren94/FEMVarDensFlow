@@ -1,0 +1,44 @@
+# Copyright (C) 2014 Murtazo Nazarov
+# 
+# 
+# 
+# 
+
+#!/bin/sh
+
+ufl_dirs=(
+"../core/src/ufl/norm"
+"../core/src/ufl/pdesmooth"
+"../euler_ev/src/ufl"
+)
+
+ufl_prm=$PWD/ufl_parameters.py
+ufl_gen=$PWD/ufl_generate
+
+echo $prm
+
+for s in ${ufl_dirs[*]}; do
+    cd $s
+
+    echo
+    echo "Entering to" $s
+    echo "Generating ufl forms ..."
+    
+    for f in *.src; do
+    	echo $f	
+    	echo $prm_dir
+        $ufl_gen $f $ufl_prm
+    done
+
+    echo "Generating cpp files ..."
+    echo "This make take some time  ..."
+    for f in *.ufl; do 
+      ffc -O -f split -f no_ferari -f simplify_expressions -f eliminate_zeros -l dolfin $f;
+	#ffc -O -f split -r quadrature  -f no_ferari -f simplify_expressions -f eliminate_zeros -l dolfin $f;
+    done   
+   
+    echo "Back to the bin directory"
+    cd -
+done
+
+

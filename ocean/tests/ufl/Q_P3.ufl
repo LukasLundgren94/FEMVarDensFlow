@@ -1,0 +1,5 @@
+Q = FiniteElement("CG", triangle, 3)
+u = TrialFunction(Q)
+v = TestFunction(Q)
+a = u * v * dx()
+L = Coefficient(Q) * v  *dx()

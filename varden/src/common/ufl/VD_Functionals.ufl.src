@@ -1,0 +1,56 @@
+# Copyright (c) 2018 Murtazo Nazarov
+# Copyright (c) 2019-2025 Lukas Lundgren
+# Licensed under the MIT License – see the LICENSE file for details
+
+V = VectorElement("Lagrange", cell, degree_V_M)
+# M = FiniteElement("Lagrange", cell, degree_V_M)
+M = FiniteElement("Lagrange", cell, degree_Q)
+Q = FiniteElement("Lagrange", cell, degree_Q)
+
+n = FacetNormal(cell)
+x = SpatialCoordinate(cell)
+
+p = Coefficient(Q)
+u = Coefficient(V)
+u1 = Coefficient(V)
+u2 = Coefficient(V)
+rho = Coefficient(M)
+T = Coefficient(M)
+mb = Coefficient(M)
+
+e_i = VectorConstant(cell)
+C_volume = Constant(cell)
+
+offset_value = 10
+eps = 1e-14
+
+m = rho * u
+
+# Surface functionals
+drag = -p * n[0] * ds(1)
+lift = p * n[1] * ds(1)
+
+# Volume averages
+Pavg = p * dx
+momentum_ = (offset_value + dot(m, e_i)) * dx  # L2Div
+kinetic_energy = 0.5 * rho * dot(u1, u2) * dx - T * x[1] * dx  # L2u
+L2rho = rho * rho * dx  # L2rho
+mass = rho * dx  # L2res_rho
+
+ang_mom = m[0] * x[1] - m[1] * x[0]
+angular_momentum_z = (offset_value + ang_mom) * dx  # L2res_mom
+
+offset = (eps * x[0] + offset_value) * dx
+melt_rate = mb * ds(1)
+
+# Line integral helper
+h_K = CellVolume(cell)
+h = sqrt(h_K)
+
+# Averaged velocity along the grounding line (dx(6)); using dS caused
+# inconsistencies between serial and parallel runs.
+tau0 = C_volume * abs(u[0]) / h * dx(6)
+
+forms = [drag, lift, Pavg, momentum_, kinetic_energy, L2rho, mass,
+         angular_momentum_z, offset, melt_rate, tau0]
+# forms = [L2rho]

@@ -1,0 +1,9 @@
+#!/bin/sh
+
+cd ../../../build;
+cmake ..;
+make -j 4 install;
+cd ../varden/tests/lock-exchange;
+cmake .;
+make -j 4;
+rm *vtu *pvd -r results

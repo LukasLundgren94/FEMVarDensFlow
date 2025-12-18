@@ -1,0 +1,65 @@
+# Copyright (C) 2014 Murtazo Nazarov
+# 
+# 
+# 
+# 
+
+#!/usr/bin/python
+
+import getopt
+from itertools import chain
+from os import curdir
+from os import path
+from os import getcwd
+import sys
+import re
+import ast
+import os
+
+# Read the UFL file
+name = sys.argv[1][:-8]
+ufl_src_file = open(name+'.ufl.src', 'r')
+ufc_src = ufl_src_file.read()
+#name = sys.argv[1]
+#ufl_src_file = open(name, 'r')
+#ufc_src = ufl_src_file.read()
+
+# Read parameter data
+#fname = name+'_ufl_prm'
+#fname = sys.argv[2][:-3]
+fname = sys.argv[2][-17:-3]
+#fname = name
+print fname
+m = __import__ (fname)
+try:
+    attrlist = m.__all__
+except AttributeError:
+    attrlist = dir (m)
+for attr in attrlist:
+    globals()[attr] = getattr (m, attr)
+
+dim = []
+for c in cell:
+    if c == 'interval':
+        dim.append(1)
+    if c == 'triangle':
+        dim.append(2)
+    if c == 'tetrahedron':
+        dim.append(3)
+    
+for d in range(0, len(dim)):
+    for p in range(0, len(degree_cg)):
+        file_name = name+"_" + str(dim[d]) + "D_P" + str(degree_cg[p]) + ".ufl"
+        print file_name
+
+        file = open(file_name, 'w+')
+        file.write("# Generated automatically\n")
+        file.write("\n")
+        file.write("cell = "+cell[d]+"\n")
+        file.write("degree_cg = "+str(degree_cg[p]))
+        file.write("\n")
+        file.write("degree_dg = "+str(degree_dg[p]))
+        file.write("\n")
+
+        file.write(ufc_src)
+        file.close()

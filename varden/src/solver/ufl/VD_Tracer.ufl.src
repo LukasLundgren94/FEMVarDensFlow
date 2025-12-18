@@ -1,0 +1,231 @@
+# Copyright (c) 2018 Murtazo Nazarov
+# Copyright (c) 2019-2025 Lukas Lundgren
+# Licensed under the MIT License – see the LICENSE file for details
+
+degree_M = degree_Q
+# degree_M = degree_V_M
+
+V = VectorElement("Lagrange", cell, degree_V_M)
+V_M = VectorElement("Lagrange", cell, degree_M)
+M = FiniteElement("Lagrange", cell, degree_M)
+DG = FiniteElement("Discontinuous Lagrange", cell, 0)
+DG1 = FiniteElement("Discontinuous Lagrange", cell, 1)
+
+
+# Define trial and test functions
+rho = TrialFunction(M)
+w = TestFunction(M)
+
+C_skew_rho_factor = Constant(cell)
+C_directional_wave_speed = Constant(cell)
+C_BDF1  = Constant(cell)
+C_crank_nicolson  = Constant(cell)
+C_BDF3  = Constant(cell)
+C_BDF4  = Constant(cell)
+
+
+tdim = cell.topological_dimension()
+
+
+def diag_tensor(values, scale):
+    if tdim == 2:
+        a, b = values
+        return scale*as_matrix([[a, 0], [0, b]])
+    a, b, c = values
+    return scale*as_matrix([[a, 0, 0], [0, b, 0], [0, 0, c]])
+
+
+h = Coefficient(V)
+diag_h = diag(h)*degree_V_M/degree_M
+
+p_grad_rho = Coefficient(V_M)
+
+rho_K = Coefficient(DG)
+
+eps = 1e-20
+
+n = FacetNormal(cell)
+
+def N_integral(u, rho, w):
+    return C_skew_rho_factor*(rho - rho_K)*div(u)*w*dx + dot(u, grad(rho))*w*dx
+
+def vms(rho, w):
+    return inner(dot(kappa_h_vms_tensor, grad(rho) - p_grad_rho), grad(w))*dx
+   
+# Define coefficients
+rho_n = Coefficient(M)
+rho_nm1 = Coefficient(M)
+rho_nm2 = Coefficient(M)
+rho_nm3 = Coefficient(M)
+
+f_source = Coefficient(M)
+f_reaction = Coefficient(M)
+
+k  = Constant(cell)
+k0  = Constant(cell)
+k00  = Constant(cell)
+k000  = Constant(cell)
+
+u_np1 = Coefficient(V)
+u_n = Coefficient(V)
+u_nm1 = Coefficient(V)
+u_nm2 = Coefficient(V)
+u_nm3 = Coefficient(V)
+
+m0_n = u_n*rho_n
+m0_nm1 = u_nm1*rho_nm1
+m0_nm2 = u_nm2*rho_nm2
+m0_nm3 = u_nm3*rho_nm3
+
+res_indicator = Coefficient(M)
+vloc = Coefficient(M)
+vloc_x = Coefficient(M)
+vloc_y = Coefficient(M)
+vloc_z = Coefficient(M)
+
+vloc_x_ = C_directional_wave_speed*vloc_x + (1-C_directional_wave_speed)*vloc
+vloc_y_ = C_directional_wave_speed*vloc_y + (1-C_directional_wave_speed)*vloc
+vloc_z_ = C_directional_wave_speed*vloc_z + (1-C_directional_wave_speed)*vloc
+C_max = Constant(cell)
+C_max_vms = Constant(cell)
+neumann_flux = Coefficient(M)
+
+kappa = Coefficient(M)
+
+kappa_h_x = abs(C_max*res_indicator*vloc_x_) + kappa
+kappa_h_y = abs(C_max*res_indicator*vloc_y_) + kappa
+kappa_h_z = abs(C_max*res_indicator*vloc_z_) + kappa
+
+kappa_h_vms_x = C_max_vms*(1-res_indicator)*vloc_x_
+kappa_h_vms_y = C_max_vms*(1-res_indicator)*vloc_y_
+kappa_h_vms_z = C_max_vms*(1-res_indicator)*vloc_z_
+
+if tdim == 2:
+    kappa_tensor = diag_tensor((kappa_h_x, kappa_h_y), diag_h)
+    kappa_h_vms_tensor = diag_tensor((kappa_h_vms_x, kappa_h_vms_y), diag_h)
+else:
+    kappa_tensor = diag_tensor((kappa_h_x, kappa_h_y, kappa_h_z), diag_h)
+    kappa_h_vms_tensor = diag_tensor((kappa_h_vms_x, kappa_h_vms_y, kappa_h_vms_z), diag_h)
+
+
+CN = Constant(cell)
+u_N = Coefficient(V)
+rho_N = Coefficient(M)
+
+rho_s = CN*rho_N + (1-CN)*(2*rho_n - rho_nm1)
+m_N = u_N*rho_s
+
+
+# CN
+rho_m = 0.5*(rho + rho_n)
+u_s = 0.5*CN*(u_N + u_n) + (1-CN)*(3/2*u_n - 0.5*u_nm1)
+m_s = CN*m_N + (1-CN)*(3/2*m0_n - 0.5*m0_nm1)
+
+
+u_s_crank_nicolson = 3/2*u_n - 0.5*u_nm1
+rho_s_crank_nicolson = 3/2*rho_n - 0.5*rho_nm1
+rho_t_crank_nicolson = (rho - rho_n )/(k)
+
+w_np2 = k/k0
+w_np1 = k0/k00
+
+alfa_0 = -pow(w_np1,3)*pow(w_np2,2)*(1 + w_np2)/ \
+( (1+w_np1)*(1 + w_np1 + w_np1*w_np2) )
+
+alfa_1 = pow(w_np2,2)*( w_np1 + 1/(1 + w_np2) )
+
+alfa_2 = -1 - w_np2 - w_np1*w_np2*(1 + w_np2)/(1 + w_np1)
+
+alfa_3 = 1 + w_np2/(1+w_np2) + w_np1*w_np2/(1 + w_np1*(1+w_np2))
+
+beta_0 = pow(w_np1,2)*w_np2*(1 + w_np2)/(1 + w_np1)
+
+beta_1 = -w_np2*( 1 + w_np1*(1 + w_np2))
+
+beta_2 = (1 + w_np2)*(1 + w_np1*(1 + w_np2))/(1 + w_np1)
+
+# u_s = 3*u_n - 3*u_nm1 + u_nm2
+u_s = beta_2*u_n + beta_1*u_nm1 + beta_0*u_nm2
+
+m_s_bdf3 = beta_2*m0_n + beta_1*m0_nm1 + beta_0*m0_nm2
+u_s_bdf3 = beta_2*u_n + beta_1*u_nm1 + beta_0*u_nm2
+rho_s_bdf3 = beta_2*rho_n + beta_1*rho_nm1 + beta_0*rho_nm2
+rho_t_bdf3 = (alfa_3*rho + alfa_2*rho_n + alfa_1*rho_nm1 + alfa_0*rho_nm2)/(k)
+
+#################################################################################
+
+
+w_np3 = k/k0
+w_np2 = k0/k00
+w_np1 = k00/k000
+
+A1 = 1 + w_np1*(1 + w_np2)
+A2 = 1 + w_np2*(1 + w_np3)
+A3 = 1 + w_np1*A2
+
+alfa_0 = (1 + w_np3)/(1 + w_np1)*A2/A1*(pow(w_np1,4)*pow(w_np2,3)*pow(w_np3,2))/A3 
+
+alfa_1 = -pow(w_np2,3)*pow(w_np3,2)*(1 + w_np3)/(1 + w_np2)*A3/A2
+
+alfa_2 = w_np3*( w_np3/(1 + w_np3) + w_np2*w_np3*(A3 + w_np1)/(1 + w_np1) )
+
+alfa_3 = -1 - w_np3*( 1 + w_np2*(1 + w_np3)/(1 + w_np2)*(1 + w_np1*A2/A1)  )
+
+alfa_4 = 1 + w_np3/(1 + w_np3) + w_np2*w_np3/A2 + w_np1*w_np2*w_np3/A3
+
+beta_0 = - pow(w_np1,3)*pow(w_np2,2)*w_np3*(1 + w_np3)/(1 + w_np1)*A2/A1
+
+beta_1 = pow(w_np2,2)*w_np3*(1 + w_np3)/(1 + w_np2)*A3
+
+beta_2 = -A2*A3*w_np3/(1 + w_np1)
+
+beta_3 = w_np2*(1 + w_np3)/(1 + w_np2)*( (1 + w_np3)*(A3 + w_np1) + (1 + w_np1)/w_np2 )/A1
+
+u_s_bdf4 = beta_3*u_n + beta_2*u_nm1 + beta_1*u_nm2 + beta_0*u_nm3
+u_s_bdf1 = u_n + eps*u_nm1
+rho_s_bdf4 = beta_3*rho_n + beta_2*rho_nm1 + beta_1*rho_nm2 + beta_0*rho_nm3
+m_s_bdf4 = beta_3*m0_n + beta_2*m0_nm1 + beta_1*m0_nm2 + beta_0*m0_nm3
+rho_t_bdf4 = (alfa_4*rho + alfa_3*rho_n + alfa_2*rho_nm1 + alfa_1*rho_nm2 + alfa_0*rho_nm3)/(k)
+rho_t_bdf1 = (rho - rho_n)/(k)
+
+u_s = CN*u_N*(1-C_crank_nicolson) + CN*C_crank_nicolson*(0.5*u_N + 0.5*u_n) + (1-CN)*(C_BDF4*u_s_bdf4 + C_BDF3*u_s_bdf3 + C_BDF1*u_s_bdf1 + C_crank_nicolson*u_s_crank_nicolson)
+rho_t = C_BDF4*rho_t_bdf4 + C_BDF3*rho_t_bdf3 + C_crank_nicolson*rho_t_crank_nicolson + C_BDF1*rho_t_bdf1
+rho_s = C_BDF4*rho_s_bdf4 + C_BDF3*rho_s_bdf3 + C_crank_nicolson*rho_s_crank_nicolson
+rho_ = C_crank_nicolson*rho_m + (1 - C_crank_nicolson)*rho
+
+
+# u_s = m_s/rho_s
+inflow = conditional(le(dot(n, u_s), 0), 1, 0)
+outflow_boundary = ds(4)
+g = Coefficient(M)
+
+# Nitsche's method for inflow boundary condition
+C_nitsche_penalty = Constant(cell)
+penalty = C_nitsche_penalty/sqrt(inner(h, h)) #abs(dot(n, u_s))*
+flux_normal = dot(n, dot(kappa_tensor, grad(rho_))) * w
+grad_correction = dot(n, dot(kappa_tensor, grad(w))) * (rho_ - g)
+bc = inflow*(penalty*(rho_ - g)*w - flux_normal - grad_correction)*outflow_boundary
+#
+
+# Robin
+# outflow = 0.5*(dot(n,u_s) + abs(dot(n,u_s)))
+# gamma = 1e3
+# bc = gamma*outflow*(rho_*w - g*w)*outflow_boundary
+
+
+# dont forget the sign of the source functions
+diffusion = inner(dot(kappa_tensor, grad(rho_)), grad(w))*dx
+source_terms = f_source*w*dx + f_reaction*rho_*w*dx
+melt_bc = neumann_flux*w*ds(1) # + C_nitsche_penalty/h*(rho_ - rho_b)*ds(1) # represent DBC for melt
+bc_bad_cells = 1e10*rho*w*dx(1) -1e10*rho_n*w*dx(1)
+
+
+eq = rho_t*w*dx + N_integral(u_s, rho_, w) + diffusion + source_terms \
+    + melt_bc + vms(rho_, w) + bc + bc_bad_cells
+
+a = lhs(eq)
+L = rhs(eq)
+
+#######################################################################################
+
+forms = [a, L]

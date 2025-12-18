@@ -1,0 +1,62 @@
+# Copyright (c) 2018 Murtazo Nazarov
+# Copyright (c) 2019-2025 Lukas Lundgren
+# Licensed under the MIT License – see the LICENSE file for details
+
+# Geometry helpers
+dim = cell.topological_dimension()
+y_component = 1 if dim > 1 else 0
+
+# Function spaces
+V = VectorElement("Lagrange", cell, degree_V_M)
+Q = FiniteElement("Lagrange", cell, degree_Q)
+M = FiniteElement("Lagrange", cell, degree_Q)
+
+n = FacetNormal(cell)
+
+# Trial and test functions
+p = TrialFunction(Q)
+q = TestFunction(Q)
+
+# Coefficients
+nu = Constant(cell)
+f_man = Coefficient(V)
+u_np1 = Coefficient(V)
+
+rho_np1 = Coefficient(M)
+rho_n = Coefficient(M)
+S_np1 = Coefficient(M)
+S_n = Coefficient(M)
+T_np1 = Coefficient(M)
+T_n = Coefficient(M)
+
+f = VectorConstant(cell)
+f_T = VectorConstant(cell)
+f_S = VectorConstant(cell)
+C_crank_nicolson = Constant(cell)
+
+eq = inner(grad(p), grad(q)) * dx - dot(
+    f * rho_np1 + f_man + nu * div(nabla_grad(u_np1)),
+    n,
+) * q * ds + div(f * rho_np1 + f_man) * q * dx
+ai = lhs(eq)
+Li = rhs(eq)
+
+# Compute hydrostatic pressure on outflow boundary. Everywhere else solve eps*Ip = eps*1 so that matrix is invertible.
+a_outflow = inner(Dx(p, y_component), Dx(q, y_component)) * dx(4) + 1e-14*p*q*dx
+
+rho_m = 0.5 * (rho_np1 + rho_n)
+T_m = 0.5 * (T_np1 + T_n)
+S_m = 0.5 * (S_np1 + S_n)
+
+rho_ = C_crank_nicolson * rho_m + (1 - C_crank_nicolson) * rho_np1
+T_ = C_crank_nicolson * T_m + (1 - C_crank_nicolson) * T_np1
+S_ = C_crank_nicolson * S_m + (1 - C_crank_nicolson) * S_np1
+
+L_outflow = (
+    rho_np1 * f[y_component]
+    + f_T[y_component] * T_
+    + f_S[y_component] * S_
+    + f_man[y_component]
+) * Dx(q, y_component) * dx(4) + 1e-14*rho_np1*q*dx
+
+forms = [ai, Li, a_outflow, L_outflow]

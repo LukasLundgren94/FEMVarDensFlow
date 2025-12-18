@@ -1,0 +1,88 @@
+{
+  "boundary_conditions": {
+    "C_ddn_penalty1": 2.0,
+    "C_ddn_penalty2": 0.0,
+    "slip_penalty": 0.0,
+    "slip_penalty_fn": 0.0
+  },
+  "iterative_solver": {
+    "C_laplace": 1.0,
+    "C_mass": 1e-10,
+    "field0_ksp": "cg",
+    "field0_max_iter": 1,
+    "field0_pc": "bjacobi",
+    "field0_tolerance": 0.1,
+    "field1_ksp": "cg",
+    "field1_max_iter": 1,
+    "field1_pc": "hypre",
+    "field1_tolerance": 0.1,
+    "initial_guess_extrapolation": 1,
+    "inner_pc": "bjacobi",
+    "max_solver_iterations": 4000,
+    "monitor_ksp": 0,
+    "number_of_newton_iterations": 1,
+    "schur_type": "UPPER",
+    "solver_tolerance": 1e-08,
+    "solver_tolerance_tracer": 1e-14,
+    "upper_pc": "bjacobi",
+    "user_schur": 1
+  },
+  "model_setup": {
+    "constant_density": 0,
+    "demo_type": "bubble",
+    "nu": 1e+20,
+    "schmidt_number": 1e+20
+  },
+  "output_diagnostics": {
+    "P3_visualization": 0,
+    "output_file_type": "xdmf",
+    "smoothing_weight": 1.0,
+    "t_avg_start": 0.35355339,
+    "t_save": 0.1,
+    "t_save_checkpoint": 10.1
+  },
+  "spatial_discretization": {
+    "PolDegree": 3,
+    "PolDegree_Q": 2,
+    "PolDegree_V_M": 3,
+    "n_points": 3,
+    "number_of_refinements": 6
+  },
+  "stabilization": {
+    "C_R": 15.0,
+    "C_brezzi": 0.0,
+    "C_flat": 0.15,
+    "C_max": 0.33,
+    "C_max_vms": 0.05,
+    "mesh_size_boundary_weight": 1,
+    "directional_wave_speed": 1,
+    "emac_pressure_shift": 0.25,
+    "gamma_grad_div": 0.5,
+    "normalization_eps": 1e-10,
+    "project_uu": 1,
+    "remove_pressure_average": 1,
+    "remove_rho_average": 1,
+    "res_scaling_C_l": 1.0,
+    "residual_BDF": 3,
+    "rv_gamma": 2.0,
+    "rv_smoothing_weight": 2.5,
+    "skew_factor": 1.0,
+    "skew_rho_factor": 0.5
+  },
+  "time_integration": {
+    "CFL": 0.2,
+    "T": 3.5355339,
+    "bdf_init_factor": 1.0,
+    "CFL_DG0": 1,
+    "dt_pid_kp": 0.23333333333333334,
+    "dt_pid_ki": 0.13333333333333333,
+    "dt_pid_kd": 0.03333333333333333,
+    "dt_pid_safety": 0.9,
+    "dt_pid_error_min": 1e-06,
+    "dt_pid_error_max": 1000000.0,
+    "dt_pid_ratio_min": 0.99,
+    "dt_pid_ratio_max": 1.01,
+    "dt_pid_retry_ratio_min": 0.98,
+    "time_order": 4
+  }
+}

@@ -85,8 +85,21 @@ struct RestoringProfile_S
     // python code:
     // '34.5 + 1.0/2 * tanh(5 * pi * (-x[1] + 800.0) / ({ymax} - {ymin}))'
     // return 34.5 + 1.0 / 2. * std::tanh(5 * M_PI * (-y_value + 800.0) / (ymax - ymin));
+    
+    // SOF Profile exponential:
     //     S_surf + (S_deep - S_surf) / (1 + np.exp((z - z_th)/delta))
-    return 34.2 + (34.81 - 34.2) / (1. + std::exp((y_value - 770. + 1000.0)/47.)); 
+    // return 34.2 + (34.81 - 34.2) / (1. + std::exp((y_value - 770. + 1000.0)/47.)); 
+
+    // double exp profile victoria fjord:
+    // return -22.946 * std::exp(0.194 * y_value) + -6.704 * std::exp(0.016 * y_value) + 34.790;
+    
+    // double exp profile victoria fjord without PSW, make sure to consider that z is 0 at the seasurface and negative down:
+    return -5.133 * exp(-0.013 * -y_value) + -98.462 * exp(-0.000 * -y_value) + 133.222;
+    
+    // Victoria fjord exponential profile without PSW
+    // return -5.164 * exp(-0.013 * y_value) + 34.813;
+
+    // return 34.75;
 
   }
 };
@@ -103,8 +116,21 @@ struct RestoringProfile_T
     // python code:
     // '(0.2 + (-1.6))/2 + (0.2 - (-1.6))/2 * tanh(5 * pi * (-x[1] + 800.0) / ({ymax} - {ymin}))'
     // return (0.2 + (-1.6)) / 2. + (0.2 - (-1.6)) / 2. * std::tanh(5. * M_PI * (-y_value + 800.0) / (ymax - ymin));
+
+    // SOF Profile exponential:
     //     T_surf + (T_deep - T_surf)  / (1 + np.exp((z      - z_th)/delta))
-    return -0.676 + (0.345 - (-0.676)) / (1. + std::exp((y_value - 779. + 1000.0)/45.6));
+    // return -0.676 + (0.345 - (-0.676)) / (1. + std::exp((y_value - 779. + 1000.0)/45.6));
+
+    // Victoria fjord double exponential profile:
+    // return 3.670 * std::exp(0.075 * y_value) + -2.861 * std::exp(0.008 * y_value) + 0.366;
+    
+    // Victoria fjord double exponential profile without PSW:
+    // return 1.088 * exp(-0.040 * -y_value) + -2.955 * exp(-0.008 * -y_value) + 0.365;
+
+    // Victoria fjord exponential profile without PSW
+    //return -2.403 * exp(-0.007 * y_value) + 0.388;
+
+    return 0.5;
   }
 };
 

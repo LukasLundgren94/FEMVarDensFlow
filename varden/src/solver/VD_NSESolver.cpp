@@ -30,10 +30,12 @@
 #include <dolfin/refinement/refine.h>
 
 ///
-namespace dolfin {
-class Assembler;
-class Constant;
-template <typename T> class MeshFunction;
+namespace dolfin
+{
+  class Assembler;
+  class Constant;
+  template <typename T>
+  class MeshFunction;
 } // namespace dolfin
 
 ///
@@ -92,7 +94,8 @@ VD_NSESolver::VD_NSESolver(
     std::shared_ptr<const Expression> slipbc_marker_fn, Parameters &p,
     double &time, double dt)
     : mesh_(mesh), initial_u(initial_u), f(f), f_man(f_man), bcs_u_(bcs_u),
-      bcs_P_(bcs_P), bcs_rho_(bcs_rho), time_(time), dt_(dt) {
+      bcs_P_(bcs_P), bcs_rho_(bcs_rho), time_(time), dt_(dt)
+{
   parameters = p;
   slip_bcs_ = slip_bcs;
   slipbc_marker_ = slipbc_marker;
@@ -114,7 +117,8 @@ VD_NSESolver::VD_NSESolver(std::shared_ptr<const Mesh> mesh,
                            std::shared_ptr<std::vector<DirichletBC *>> bcs_rho,
                            Parameters &p, double &time, double dt)
     : mesh_(mesh), initial_u(initial_u), f(f), f_man(f_man), bcs_u_(bcs_u),
-      bcs_P_(bcs_P), bcs_rho_(bcs_rho), time_(time), dt_(dt) {
+      bcs_P_(bcs_P), bcs_rho_(bcs_rho), time_(time), dt_(dt)
+{
   parameters = p;
   initial_P_ = initial_P;
   initial_rho_ = initial_rho;
@@ -136,7 +140,8 @@ VD_NSESolver::VD_NSESolver(std::shared_ptr<const Mesh> mesh,
                            std::shared_ptr<const FunctionSpace> M,
                            Parameters &p, double &time, double dt)
     : mesh_(mesh), initial_u(initial_u), f(f), f_man(f_man), bcs_u_(bcs_u),
-      bcs_P_(bcs_P), bcs_rho_(bcs_rho), time_(time), dt_(dt) {
+      bcs_P_(bcs_P), bcs_rho_(bcs_rho), time_(time), dt_(dt)
+{
   parameters = p;
   V_ = V;
   Q_ = Q;
@@ -164,7 +169,8 @@ VD_NSESolver::VD_NSESolver(
     std::shared_ptr<const FunctionSpace> M, Parameters &p, double &time,
     double dt)
     : mesh_(mesh), initial_u(initial_u), f(f), f_man(f_man), bcs_u_(bcs_u),
-      bcs_P_(bcs_P), bcs_rho_(bcs_rho), time_(time), dt_(dt) {
+      bcs_P_(bcs_P), bcs_rho_(bcs_rho), time_(time), dt_(dt)
+{
   parameters = p;
   V_ = V;
   Q_ = Q;
@@ -197,7 +203,8 @@ VD_NSESolver::VD_NSESolver(
     std::shared_ptr<const FunctionSpace> M, Parameters &p, double &time,
     double dt)
     : mesh_(mesh), initial_u(initial_u), f(f), f_man(f_man), bcs_u_(bcs_u),
-      bcs_P_(bcs_P), bcs_rho_(bcs_rho), time_(time), dt_(dt) {
+      bcs_P_(bcs_P), bcs_rho_(bcs_rho), time_(time), dt_(dt)
+{
   parameters = p;
   V_ = V;
   Q_ = Q;
@@ -243,7 +250,8 @@ VD_NSESolver::VD_NSESolver(
     std::shared_ptr<MeshFunction<std::size_t>> sub_domains, double &time,
     double dt)
     : mesh_(mesh), initial_u(initial_u), f(f), f_man(f_man), bcs_u_(bcs_u),
-      bcs_P_(bcs_P), bcs_rho_(bcs_rho), time_(time), dt_(dt) {
+      bcs_P_(bcs_P), bcs_rho_(bcs_rho), time_(time), dt_(dt)
+{
   parameters = p;
   V_ = V;
   Q_ = Q;
@@ -271,7 +279,8 @@ VD_NSESolver::VD_NSESolver(
 }
 
 //-----------------------------------------------------------------------------
-void VD_NSESolver::init() {
+void VD_NSESolver::init()
+{
   dt_pid_prev_error_ = 1.0;
   dt_pid_has_prev_error_ = false;
   constant_density = parameters["constant_density"];
@@ -297,7 +306,8 @@ void VD_NSESolver::init() {
   LPS_TENSOR_EQ_.ls->parameters["absolute_tolerance"] = 1.0e-20;
   LPS_TENSOR_EQ_.ls->parameters["nonzero_initial_guess"] = true;
 
-  if (V_ && Q_ && M_) {
+  if (V_ && Q_ && M_)
+  {
 
     VD_NSETracerEquation::init(mesh_, M_, TRACER_EQ_, parameters);
 
@@ -310,7 +320,8 @@ void VD_NSESolver::init() {
     VD_Divergence::init(mesh_, DIV_FORM_, parameters);
   }
 
-  else {
+  else
+  {
     error("No function spaces provided.");
   }
 
@@ -337,11 +348,14 @@ void VD_NSESolver::init() {
   Cvloc_inf = std::make_shared<Constant>(1.0);
   C_brezzi_ = std::make_shared<Constant>(c_brezzi);
 
-  if (dim_ == 2) {
+  if (dim_ == 2)
+  {
     e_x_ = std::make_shared<Constant>(1.0, 0.0);
     e_y_ = std::make_shared<Constant>(0.0, 1.0);
     e_z_ = std::make_shared<Constant>(0.0, 0.0);
-  } else if (dim_ == 3) {
+  }
+  else if (dim_ == 3)
+  {
     e_x_ = std::make_shared<Constant>(1.0, 0.0, 0.0);
     e_y_ = std::make_shared<Constant>(0.0, 1.0, 0.0);
     e_z_ = std::make_shared<Constant>(0.0, 0.0, 1.0);
@@ -357,15 +371,19 @@ void VD_NSESolver::init() {
   if (sc <= 0.0)
     error("Schmidt number must be positive");
 
-  if (sc < 1.0e10) {
+  if (sc < 1.0e10)
+  {
     kappa = nu / sc;
-  } else {
+  }
+  else
+  {
     kappa = 0.0;
   }
 
   auto Czero = std::make_shared<Constant>(0.0);
 
-  if (f_source_S_ == nullptr) {
+  if (f_source_S_ == nullptr)
+  {
     f_source_S_ = Czero;
     f_source_T_ = Czero;
     f_reaction_T_ = Czero;
@@ -400,9 +418,12 @@ void VD_NSESolver::init() {
   C_max_ = std::make_shared<Constant>(parameters["C_max"]);
   C_max_vms_ = std::make_shared<Constant>(parameters["C_max_vms"]);
 
-  if (demo_type == "ocean" && dim_ == 3) {
+  if (demo_type == "ocean" && dim_ == 3)
+  {
     C_omega_ = std::make_shared<Constant>(parameters["f_ocean_coriolis"]);
-  } else {
+  }
+  else
+  {
     C_omega_ = std::make_shared<Constant>(0.0);
   }
 
@@ -416,9 +437,12 @@ void VD_NSESolver::init() {
   C_S_mass_ = std::make_shared<Constant>(mass_S);
   C_kappa_T_ = std::make_shared<Constant>(0.0);
   C_zero_ = std::make_shared<Constant>(0.0);
-  if (dim_ == 2) {
+  if (dim_ == 2)
+  {
     C_zeros_ = std::make_shared<Constant>(0.0, 0.0);
-  } else if (dim_ == 3) {
+  }
+  else if (dim_ == 3)
+  {
     C_zeros_ = std::make_shared<Constant>(0.0, 0.0, 0.0);
   }
 
@@ -524,10 +548,12 @@ void VD_NSESolver::init() {
   Ftau2_ = std::make_shared<Function>(MOM_EQ_.V);
   Fslipbc_marker_ = std::make_shared<Function>(TRACER_EQ_.M);
   Fslipbc_marker_fn_ = std::make_shared<Function>(TRACER_EQ_.M);
-  if (slipbc_marker_ != nullptr) {
+  if (slipbc_marker_ != nullptr)
+  {
     Fslipbc_marker_->interpolate(*slipbc_marker_);
   }
-  if (slipbc_marker_fn_ != nullptr) {
+  if (slipbc_marker_fn_ != nullptr)
+  {
     Fslipbc_marker_fn_->interpolate(*slipbc_marker_fn_);
   }
 
@@ -536,10 +562,13 @@ void VD_NSESolver::init() {
   refine(mesh_fine, mesh_fine, false);
   auto mesh_fine_ = std::make_shared<Mesh>(mesh_fine);
 
-  if (dim_ == 2) {
+  if (dim_ == 2)
+  {
     V_P1_ =
         std::make_shared<VD_Mixed_2D_P1P1::CoefficientSpace_u_n>(mesh_fine_);
-  } else {
+  }
+  else
+  {
     V_P1_ =
         std::make_shared<VD_Mixed_3D_P1P1::CoefficientSpace_u_n>(mesh_fine_);
   }
@@ -697,18 +726,26 @@ void VD_NSESolver::init() {
                          {"rho_nm2", FP_nm2_},
                          {"rho_nm3", FP_nm3_}};
 
-  if (!f_S_) {
-    if (dim_ == 2) {
+  if (!f_S_)
+  {
+    if (dim_ == 2)
+    {
       f_S_ = std::make_shared<Constant>(0.0, 0.0);
-    } else {
+    }
+    else
+    {
       f_S_ = std::make_shared<Constant>(0.0, 0.0, 0.0);
     }
   }
 
-  if (!f_T_) {
-    if (dim_ == 2) {
+  if (!f_T_)
+  {
+    if (dim_ == 2)
+    {
       f_T_ = std::make_shared<Constant>(0.0, 0.0);
-    } else {
+    }
+    else
+    {
       f_T_ = std::make_shared<Constant>(0.0, 0.0, 0.0);
     }
   }
@@ -816,7 +853,7 @@ void VD_NSESolver::init() {
   lsrho_->parameters["relative_tolerance"] = tolerance_tracer;
   // lsrho_->parameters["monitor_convergence"] = true;
 
-  lsP_ = std::make_shared<LinearSolver>("bicgstab", "hypre_amg");
+  lsP_ = std::make_shared<LinearSolver>("bicgstab", "petsc_amg");
 
   lsP_->parameters["relative_tolerance"] = tolerance;
   lsP_->parameters["absolute_tolerance"] = 1e-20;
@@ -864,7 +901,8 @@ void VD_NSESolver::init() {
     get_dt_cfl(*Fvloc_, dof_M_, time_, dt_, parameters);
 
     // apply Dirichlet bc
-    for (std::size_t i = 0; i < bcs_u_->size(); ++i) {
+    for (std::size_t i = 0; i < bcs_u_->size(); ++i)
+    {
       (*bcs_u_)[i]->apply(*A00, *b0);
       (*bcs_u_)[i]->zero(*A01);
     }
@@ -885,7 +923,8 @@ void VD_NSESolver::init() {
       error("Petsc error code %d when performing MatCreateNest", ierr);
 
     ierr = MatNestGetISs(A_nest_mat, is.data(), is_col.data());
-    if (ierr != 0) {
+    if (ierr != 0)
+    {
       error("Petsc error code %d when performing MatNestGetISs", ierr);
     }
 
@@ -940,7 +979,8 @@ void VD_NSESolver::init() {
     PETScOptions::set("fieldsplit_1_ksp_rtol", field1_tol);
     PETScOptions::set("fieldsplit_1_ksp_max_it", field1_max_iter);
 
-    if (user_schur == 0) {
+    if (user_schur == 0)
+    {
       PETScOptions::set("fieldsplit_1_pc_jacobi_type", "rowsum");
 
       PETScOptions::set("fieldsplit_1_inner_pc_jacobi_type", "rowsum");
@@ -964,7 +1004,8 @@ void VD_NSESolver::init() {
                         "blockdiag");
     }
 
-    if (monitor_ksp == 1) {
+    if (monitor_ksp == 1)
+    {
       PETScOptions::set("fieldsplit_0_ksp_converged_reason");
       PETScOptions::set("fieldsplit_1_ksp_converged_reason");
 
@@ -998,46 +1039,55 @@ void VD_NSESolver::init() {
 
     PC pc;
     ierr = KSPGetPC(schur_krylovsolver->ksp(), &pc);
-    if (ierr != 0) {
+    if (ierr != 0)
+    {
       error("Petsc error code %d when performing KSPGetPC", ierr);
     }
 
     ierr = PCFieldSplitSetIS(pc, "0", is[0]);
-    if (ierr != 0) {
+    if (ierr != 0)
+    {
       error("Petsc error code %d when performing PCFieldSplitSetIS", ierr);
     }
 
     ierr = PCFieldSplitSetIS(pc, "1", is[1]);
-    if (ierr != 0) {
+    if (ierr != 0)
+    {
       error("Petsc error code %d when performing PCFieldSplitSetIS", ierr);
     }
 
-    if (user_schur == 0) {
+    if (user_schur == 0)
+    {
       ierr = PCFieldSplitSetSchurPre(pc, PC_FIELDSPLIT_SCHUR_PRE_USER,
                                      as_type<PETScMatrix>(*ASchur).mat());
-      if (ierr != 0) {
+      if (ierr != 0)
+      {
         error("Petsc error code %d when performing PCFieldSplitSetSchurPreC",
               ierr);
       }
     }
 
-    if (user_schur == 1) {
+    if (user_schur == 1)
+    {
       // Supplying own schur
       ierr = PCSetUp(pc);
       KSP *subksp;
       PetscInt index_field1 = 1;
-      if (ierr != 0) {
+      if (ierr != 0)
+      {
         error("Petsc error code %d when performing PCFieldSplitSetIS", ierr);
       }
 
       ierr = PCFieldSplitGetSubKSP(pc, &index_field1, &subksp);
-      if (ierr != 0) {
+      if (ierr != 0)
+      {
         error("Petsc error code %d when performing PCFieldSplitSetIS", ierr);
       }
 
       ierr = KSPSetOperators(subksp[1], as_type<PETScMatrix>(*ASchur).mat(),
                              as_type<PETScMatrix>(*ASchur).mat());
-      if (ierr != 0) {
+      if (ierr != 0)
+      {
         error("Petsc error code %d when performing PCFieldSplitSetIS", ierr);
       }
     }
@@ -1065,19 +1115,23 @@ void VD_NSESolver::init() {
   // for visualization of P2 and P3 solution:
   int const p3_visualization = parameters["P3_visualization"];
   mesh_fine_ = std::make_shared<Mesh>(*mesh_);
-  if (pol_degree > 1) {
+  if (pol_degree > 1)
+  {
     bool redistribute = false;
     refine(*mesh_fine_, *mesh_, redistribute);
     if (pol_degree > 2 && p3_visualization == 1)
       refine(*mesh_fine_, *mesh_fine_, redistribute);
   }
 
-  if (dim_ == 2) {
+  if (dim_ == 2)
+  {
     V_fine =
         std::make_shared<VD_Mixed_2D_P1P1::CoefficientSpace_u_n>(mesh_fine_);
     M_fine = std::make_shared<VD_Tracer_2D_P1P1::FunctionSpace>(mesh_fine_);
     Q_CG1_ = std::make_shared<VD_Tracer_2D_P1P1::FunctionSpace>(mesh_);
-  } else if (dim_ == 3) {
+  }
+  else if (dim_ == 3)
+  {
     V_fine =
         std::make_shared<VD_Mixed_3D_P1P1::CoefficientSpace_u_n>(mesh_fine_);
     M_fine = std::make_shared<VD_Tracer_3D_P1P1::FunctionSpace>(mesh_fine_);
@@ -1159,7 +1213,8 @@ void VD_NSESolver::init() {
   Function Flump(M_fine);
   NV_->compute_grad_phi_CG1(Q_CG1_, *Fgrad_phi_DG0_);
 
-  if (directional_wave_speed == 1) {
+  if (directional_wave_speed == 1)
+  {
     H_EQ_.a->set_coefficient("C_grad_phi_h", C_one_);
     H_EQ_.a->set_coefficient("h_grad_phi", Fgrad_phi_DG0_);
     H_EQ_.L->set_coefficient("C_grad_phi_h", C_one_);
@@ -1177,7 +1232,8 @@ void VD_NSESolver::init() {
   File file_mesh_size("results/pvd_files/mesh_size.pvd");
   file_mesh_size.write(*Fh_PX_);
 
-  if (bad_cells_boundary_condition) {
+  if (bad_cells_boundary_condition)
+  {
     set_log_active(true);
     info("Identifying bad cells...");
     set_log_active(false);
@@ -1193,7 +1249,8 @@ void VD_NSESolver::init() {
 }
 
 //-----------------------------------------------------------------------------
-void VD_NSESolver::init_temperature() {
+void VD_NSESolver::init_temperature()
+{
 
   C_kappa_T_ = std::make_shared<Constant>(0.0);
 
@@ -1202,11 +1259,13 @@ void VD_NSESolver::init_temperature() {
   double kappa_T;
   double kappa_S;
 
-  if (parameters.has_parameter("kappa_T")) {
+  if (parameters.has_parameter("kappa_T"))
+  {
     kappa_T = parameters["kappa_T"];
     kappa_S = parameters["kappa_S"];
-
-  } else {
+  }
+  else
+  {
     // Create a dummy error message
     std::string error_message = "No value for kappa_T given in input file.";
 
@@ -1268,7 +1327,8 @@ void VD_NSESolver::init_temperature() {
   file_saver_fine_->add(*FS_np1_, M_fine, "S_fine" + stime.str());
 }
 
-void VD_NSESolver::init_ocean() {
+void VD_NSESolver::init_ocean()
+{
   // Create boundary mesh
   auto boundary_mesh_ = std::make_shared<BoundaryMesh>(*mesh_, "exterior");
   boundary_mesh_->bounding_box_tree(); // neccessary for eval to work
@@ -1284,7 +1344,8 @@ void VD_NSESolver::init_ocean() {
   FS_avg_ = std::make_shared<Function>(MOM_EQ_.M);
   C_volume_ = std::make_shared<Constant>(1.0);
 
-  if (melt_with_virtual_flux == 0 || melt_with_virtual_flux == 2) {
+  if (melt_with_virtual_flux == 0 || melt_with_virtual_flux == 2)
+  {
     F_melt_V_ = std::make_shared<Function>(V_->sub(0)->collapse());
     F_melt_VV_ = std::make_shared<Function>(V_);
 
@@ -1294,12 +1355,14 @@ void VD_NSESolver::init_ocean() {
         std::make_shared<DirichletBC>(V_->sub(0), F_melt_V_, sub_domains_, 1);
     melt_vector_bc1 =
         std::make_shared<DirichletBC>(V_->sub(1), F_melt_V_, sub_domains_, 1);
-    if (dim_ == 3) {
+    if (dim_ == 3)
+    {
       melt_vector_bc2 =
           std::make_shared<DirichletBC>(V_->sub(2), F_melt_V_, sub_domains_, 1);
     }
 
-    if (melt_with_virtual_flux == 0) {
+    if (melt_with_virtual_flux == 0)
+    {
       FT_b_ = std::make_shared<Function>(MOM_EQ_.M);
       FS_b_ = std::make_shared<Function>(MOM_EQ_.M);
 
@@ -1315,9 +1378,12 @@ void VD_NSESolver::init_ocean() {
 
   double solver_tolerance_tracer = parameters["solver_tolerance_tracer"];
   double restoring_region_width = parameters["restoring_region_width"];
-  if (restoring_region_width <= 0.0) {
+  if (restoring_region_width <= 0.0)
+  {
     *C_nitsche_penalty_ = parameters["C_nitsche_penalty"];
-  } else {
+  }
+  else
+  {
     *C_nitsche_penalty_ = 0.0;
   }
   melting_with_rv = parameters["melting_with_rv"];
@@ -1326,7 +1392,8 @@ void VD_NSESolver::init_ocean() {
   double c_friction = parameters["C_slip_friction"];
   *C_slip_friction_ = c_friction;
 
-  if (melting_with_rv > 0) {
+  if (melting_with_rv > 0)
+  {
     flux_h_factor = parameters["flux_h_factor"];
   }
 
@@ -1342,9 +1409,9 @@ void VD_NSESolver::init_ocean() {
   FT_np1_->set_allow_extrapolation(true);
 
   ff_S = std::make_shared<fem_varden_flow::FarFieldTracer>(FS_np1_, *unit_node_normal_,
-                                                   parameters);
+                                                           parameters);
   ff_T = std::make_shared<fem_varden_flow::FarFieldTracer>(FT_np1_, *unit_node_normal_,
-                                                   parameters);
+                                                           parameters);
 
   boundary_layer_thickness =
       static_cast<double>(parameters["boundary_layer_thickness"]);
@@ -1357,7 +1424,8 @@ void VD_NSESolver::init_ocean() {
   dolfin::Array<double> coors_temp(dim_);
   dolfin::Array<double> values_temp(dim_);
   // just choose an arbitrary value inside domain
-  for (std::size_t i = 0; i < dim_; i++) {
+  for (std::size_t i = 0; i < dim_; i++)
+  {
     coors_temp[i] = 0.0;
     values_temp[i] = 0.0;
   }
@@ -1394,7 +1462,8 @@ void VD_NSESolver::init_ocean() {
   auto Czero = std::make_shared<Constant>(0.0);
   auto Cone = std::make_shared<Constant>(1.0);
   MANIFOLD_EQ_.a->set_coefficient("weight", Cmelt_smoothing_weight_);
-  if (MANIFOLD_EQ_.A.empty()) {
+  if (MANIFOLD_EQ_.A.empty())
+  {
     assemble(MANIFOLD_EQ_.A, *MANIFOLD_EQ_.a);
   }
 
@@ -1432,12 +1501,14 @@ void VD_NSESolver::init_ocean() {
 }
 
 //-----------------------------------------------------------------------------
-VD_NSESolver::~VD_NSESolver() {
+VD_NSESolver::~VD_NSESolver()
+{
   // Enjoy your tea!
 }
 
 //-----------------------------------------------------------------------------
-void VD_NSESolver::solve(std::size_t n_retreive) {
+void VD_NSESolver::solve(std::size_t n_retreive)
+{
   info(parameters, true);
   t_avg_start_ = parameters["t_avg_start"];
   Tend_ = parameters["T"];
@@ -1460,15 +1531,20 @@ void VD_NSESolver::solve(std::size_t n_retreive) {
   // FP_analytic->interpolate(*initial_P_);
 
   /// contruct initial data
-  if (n_retreive == 0) {
+  if (n_retreive == 0)
+  {
     bool is_checkpoint = false;
     compute_initial(is_checkpoint);
-  } else {
+  }
+  else
+  {
     std::vector<double> ch_times;
     file_saver_->get_checkpoint_times(ch_times);
 
-    if (n_retreive == -1) {
-      for (int i = 0; i < ch_times.size(); ++i) {
+    if (n_retreive == -1)
+    {
+      for (int i = 0; i < ch_times.size(); ++i)
+      {
         set_log_active(true);
         info("val[%d] = %g", i, ch_times[i]);
         set_log_active(false);
@@ -1508,7 +1584,8 @@ void VD_NSESolver::solve(std::size_t n_retreive) {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  if (rank == 0) {
+  if (rank == 0)
+  {
     std::ostringstream error_fname;
     std::string strObj = error_fname.str();
 
@@ -1522,14 +1599,16 @@ void VD_NSESolver::solve(std::size_t n_retreive) {
 
   int const time_order = parameters["time_order"];
 
-  if (time_order > 2) {
+  if (time_order > 2)
+  {
     constant_dt_init();
   }
 
   compute_unknowns();
   compute_time_derivatives();
 
-  while (time_ < Tend_ + DOLFIN_EPS_LARGE) {
+  while (time_ < Tend_ + DOLFIN_EPS_LARGE)
+  {
 
     time_ += dt_;
     compute_solutions();
@@ -1579,7 +1658,8 @@ void VD_NSESolver::solve(std::size_t n_retreive) {
     FUNC_->L2rho->set_coefficient("rho", Frho_analytic);
     double L2_rho_error = sqrt(assemble_functional(*(FUNC_->L2rho), *scalar));
 
-    if (initial_T_) {
+    if (initial_T_)
+    {
       Frho_analytic->interpolate(*initial_T_);
     }
     Frho_analytic->vector()->axpy(-1.0, *FT_np1_->vector());
@@ -1608,7 +1688,8 @@ void VD_NSESolver::solve(std::size_t n_retreive) {
          num_iter_mom0, num_iter_rho, min_rho, kinetic_energy, toc());
     set_log_active(false);
 
-    if (rank == 0) {
+    if (rank == 0)
+    {
       std::ostringstream error_fname;
       std::string strObj = error_fname.str();
 
@@ -1640,7 +1721,8 @@ void VD_NSESolver::solve(std::size_t n_retreive) {
 }
 
 //-----------------------------------------------------------------------------
-void VD_NSESolver::adaptive_solve(std::size_t n_retreive) {
+void VD_NSESolver::adaptive_solve(std::size_t n_retreive)
+{
   dolfin::Timer timer_dt("time-step");
   double L2rho, min_rho, L2_rho_error, L2_u_error = 0.0;
   info(parameters, true);
@@ -1663,15 +1745,20 @@ void VD_NSESolver::adaptive_solve(std::size_t n_retreive) {
   std::ostringstream stime;
 
   /// contruct initial data
-  if (n_retreive == 0) {
+  if (n_retreive == 0)
+  {
     bool is_checkpoint = false;
     compute_initial(is_checkpoint);
-  } else {
+  }
+  else
+  {
     std::vector<double> ch_times;
     file_saver_->get_checkpoint_times(ch_times);
 
-    if (n_retreive == -1) {
-      for (int i = 0; i < ch_times.size(); ++i) {
+    if (n_retreive == -1)
+    {
+      for (int i = 0; i < ch_times.size(); ++i)
+      {
         set_log_active(true);
         info("val[%d] = %g", i, ch_times[i]);
         set_log_active(false);
@@ -1701,7 +1788,8 @@ void VD_NSESolver::adaptive_solve(std::size_t n_retreive) {
 
   double Linfu = Fu_np1_->vector()->norm("linf");
 
-  if (rank == 0) {
+  if (rank == 0)
+  {
     std::ostringstream error_fname;
     std::string strObj = error_fname.str();
 
@@ -1734,7 +1822,8 @@ void VD_NSESolver::adaptive_solve(std::size_t n_retreive) {
 
   int const time_order = parameters["time_order"];
 
-  if (time_order > 2) {
+  if (time_order > 2)
+  {
     time_ += dt_;
     second_order_iteration();
     compute_unknowns();
@@ -1773,12 +1862,14 @@ void VD_NSESolver::adaptive_solve(std::size_t n_retreive) {
   bool redo_step;
   double dt_new = dt_;
   double iter_time = toc();
-  while (time_ < Tend_ - 1e-6) {
+  while (time_ < Tend_ - 1e-6)
+  {
     timer_dt.start();
 
     adapt_dt(*Fvloc_, dof_M_, time_, dt_new, parameters, redo_step);
 
-    while (redo_step) {
+    while (redo_step)
+    {
       time_ -= dt_;
       dt_ = dt_new;
       time_ += dt_;
@@ -1826,7 +1917,8 @@ void VD_NSESolver::adaptive_solve(std::size_t n_retreive) {
 
     // Move to next time step
     /// save to file
-    if (rank == 0) {
+    if (rank == 0)
+    {
       std::ostringstream error_fname;
       std::string strObj = error_fname.str();
 
@@ -1860,15 +1952,18 @@ void VD_NSESolver::adaptive_solve(std::size_t n_retreive) {
   *FP_np1_->vector() -= Pavg;
 }
 
-void VD_NSESolver::compute_initial(bool is_checkpoint) {
+void VD_NSESolver::compute_initial(bool is_checkpoint)
+{
   *Frho_np1_->vector() = 1.0;
 
-  if (!is_checkpoint) {
+  if (!is_checkpoint)
+  {
     Fu_np1_->interpolate(initial_u);
     Frho_exact_->interpolate(*initial_rho_);
     Frho_np1_->interpolate(*initial_rho_);
 
-    if (initial_P_ != nullptr) {
+    if (initial_P_ != nullptr)
+    {
       auto Form_Pavg = FUNC_->Pavg;
       double Pavg;
       FP_np1_->interpolate(*initial_P_);
@@ -1883,8 +1978,10 @@ void VD_NSESolver::compute_initial(bool is_checkpoint) {
     PDESmooth_rho_ =
         std::make_shared<PDESmooth>(TRACER_EQ_.M, Fh_PX_, parameters);
     PDESmooth_rho_->smooth(Frho_np1_);
-    if (!constantTemperature) {
-      if (initial_S_ == nullptr) {
+    if (!constantTemperature)
+    {
+      if (initial_S_ == nullptr)
+      {
         auto zero = std::make_shared<dolfin::Constant>(0.0);
         initial_S_ = zero;
         bcs_S_ = bcs_T_;
@@ -1904,7 +2001,8 @@ void VD_NSESolver::compute_initial(bool is_checkpoint) {
     }
   }
 
-  for (std::size_t i = 0; i < bcs_u_->size(); ++i) {
+  for (std::size_t i = 0; i < bcs_u_->size(); ++i)
+  {
     (*bcs_u_)[i]->apply(*Fu_np1_->vector());
   }
   *Fu_n_->vector() = *Fu_np1_->vector();
@@ -1912,7 +2010,8 @@ void VD_NSESolver::compute_initial(bool is_checkpoint) {
   *Fu_nm2_->vector() = *Fu_np1_->vector();
   *Fu_nm3_->vector() = *Fu_np1_->vector();
 
-  for (std::size_t i = 0; i < bcs_rho_->size(); ++i) {
+  for (std::size_t i = 0; i < bcs_rho_->size(); ++i)
+  {
     (*bcs_rho_)[i]->apply(*Frho_np1_->vector());
   }
   *Frho_np1_->vector() = *Frho_np1_->vector();
@@ -1921,11 +2020,14 @@ void VD_NSESolver::compute_initial(bool is_checkpoint) {
   *Frho_nm2_->vector() = *Frho_np1_->vector();
   *Frho_nm3_->vector() = *Frho_np1_->vector();
 
-  if (!constantTemperature) {
-    for (std::size_t i = 0; i < bcs_T_->size(); ++i) {
+  if (!constantTemperature)
+  {
+    for (std::size_t i = 0; i < bcs_T_->size(); ++i)
+    {
       (*bcs_T_)[i]->apply(*FT_np1_->vector());
     }
-    for (std::size_t i = 0; i < bcs_S_->size(); ++i) {
+    for (std::size_t i = 0; i < bcs_S_->size(); ++i)
+    {
       (*bcs_S_)[i]->apply(*FS_np1_->vector());
     }
     *FT_n_->vector() = *FT_np1_->vector();
@@ -1943,9 +2045,12 @@ void VD_NSESolver::compute_initial(bool is_checkpoint) {
   auto zero = std::make_shared<Constant>(0.0);
 
   std::shared_ptr<Constant> zeros;
-  if (dim_ == 2) {
+  if (dim_ == 2)
+  {
     zeros = std::make_shared<Constant>(0.0, 0.0);
-  } else {
+  }
+  else
+  {
     zeros = std::make_shared<Constant>(0.0, 0.0, 0.0);
   }
 
@@ -1959,14 +2064,16 @@ void VD_NSESolver::compute_initial(bool is_checkpoint) {
   dt0_ = dt_;
   dt00_ = dt_;
   dt000_ = dt_;
-
 }
 
-void VD_NSESolver::compute_statistics() {
+void VD_NSESolver::compute_statistics()
+{
   std::string const demo_type = parameters["demo_type"];
 
-  if (demo_type == "ocean") {
-    if (time_ > t_avg_start_ + dt_) {
+  if (demo_type == "ocean")
+  {
+    if (time_ > t_avg_start_ + dt_)
+    {
 
       *Fu_avg_->vector() *= time_ - t_avg_start_ - dt_;
       *FT_avg_->vector() *= time_ - t_avg_start_ - dt_;
@@ -1991,11 +2098,13 @@ void VD_NSESolver::compute_statistics() {
 }
 
 // -----------------------------------------------------------------------------
-void VD_NSESolver::compute_unknowns() {
+void VD_NSESolver::compute_unknowns()
+{
   tic();
   std::string const demo_type = parameters["demo_type"];
 
-  if (demo_type == "ocean") {
+  if (demo_type == "ocean")
+  {
 
     compute_melting();
 
@@ -2022,7 +2131,8 @@ void VD_NSESolver::compute_unknowns() {
   maxDivu = Fdiv_->vector()->max();
 
   maxDiv = Fdiv_->vector()->max();
-  if (demo_type != "ocean") {
+  if (demo_type != "ocean")
+  {
 
     FUNC_->momentum_->set_coefficient("e_i", e_x_);
     momentum_x = (assemble_functional(*(FUNC_->momentum_), *scalar)) -
@@ -2062,14 +2172,16 @@ void VD_NSESolver::compute_unknowns() {
   *C_T_mass_ = mass_T / mesh_volume_;
   *C_S_mass_ = mass_S / mesh_volume_;
 
-  if (remove_rho_average) {
+  if (remove_rho_average)
+  {
 
     *Frho_bar_->vector() = mass / mesh_volume_;
     *FT_bar_->vector() = mass_T / mesh_volume_;
     *FS_bar_->vector() = mass_S / mesh_volume_;
   }
 
-  else {
+  else
+  {
     *Frho_bar_->vector() = 0.0;
     *FT_bar_->vector() = 0.0;
     *FS_bar_->vector() = 0.0;
@@ -2083,7 +2195,8 @@ void VD_NSESolver::compute_unknowns() {
 void VD_NSESolver::get_dt_cfl(Function const &Fvloc,
                               std::vector<dolfin::la_index> const &dof_M,
                               double const &t, double &k,
-                              Parameters const &parameters) {
+                              Parameters const &parameters)
+{
   tic();
 
   int const pol_degree = parameters["PolDegree_V_M"];
@@ -2125,7 +2238,8 @@ void VD_NSESolver::get_dt_cfl(Function const &Fvloc,
   std::size_t const num_cell_nodes = num_cell_dofs / value_dim_u;
   std::size_t ii = 0;
   for (CellIterator cell(*Fu_np1_->function_space()->mesh()); !cell.end();
-       ++cell) {
+       ++cell)
+  {
     // double h = 1e10;
     // for (EdgeIterator ed(*cell); !ed.end(); ++ed)
     // {
@@ -2134,12 +2248,15 @@ void VD_NSESolver::get_dt_cfl(Function const &Fvloc,
     // h /= static_cast<double>(pol_degree);
 
     // double vloc_max = 0.0;
-    if (cfl_dg0 == 1) {
+    if (cfl_dg0 == 1)
+    {
 
-      for (std::size_t node = 0; node < num_cell_nodes; ++node) {
+      for (std::size_t node = 0; node < num_cell_nodes; ++node)
+      {
         // double vloc = 0.0;
 
-        for (int d = 0; d < value_dim_u; ++d) {
+        for (int d = 0; d < value_dim_u; ++d)
+        {
           std::size_t uii = offset_u + num_cell_nodes * d + node;
           std::size_t grad_K_pos = offset_DG0 + 1 * d;
 
@@ -2161,12 +2278,15 @@ void VD_NSESolver::get_dt_cfl(Function const &Fvloc,
         // double hvloc = vloc / h;
         // h_min = std::min(h_min, h);
       }
-    } else {
+    }
+    else
+    {
       Point p = cell->midpoint();
       dolfin::Array<double> coors_midpoint(dim_);
       dolfin::Array<double> u_d(1);
       dolfin::Array<double> h(dim_);
-      for (std::size_t d = 0; d < dim_; ++d) {
+      for (std::size_t d = 0; d < dim_; ++d)
+      {
         coors_midpoint[d] = p[d];
       }
 
@@ -2180,7 +2300,8 @@ void VD_NSESolver::get_dt_cfl(Function const &Fvloc,
       hvloc_max = std::max(hvloc_max, u_d[0] / (h[1] + 1.0e-10));
       h_min = std::min(h_min, h[1]);
 
-      if (dim_ == 3) {
+      if (dim_ == 3)
+      {
         Fvloc_z_->eval(u_d, coors_midpoint);
         hvloc_max = std::max(hvloc_max, u_d[0] / (h[2] + 1.0e-10));
         h_min = std::min(h_min, h[2]);
@@ -2200,7 +2321,8 @@ void VD_NSESolver::get_dt_cfl(Function const &Fvloc,
 
   double h =
       dolfin::MPI::min(Fu_np1_->function_space()->mesh()->mpi_comm(), h_min);
-  if (isinf(k) || k > 1.0e5) {
+  if (isinf(k) || k > 1.0e5)
+  {
     k = cfl * h;
   }
 }
@@ -2208,7 +2330,8 @@ void VD_NSESolver::get_dt_cfl(Function const &Fvloc,
 void VD_NSESolver::adapt_dt(Function const &Fvloc,
                             std::vector<dolfin::la_index> const &dof_M,
                             double const &t, double &k,
-                            Parameters const &parameters, bool &redo_step) {
+                            Parameters const &parameters, bool &redo_step)
+{
 
   double const Time = parameters["T"];
 
@@ -2231,11 +2354,13 @@ void VD_NSESolver::adapt_dt(Function const &Fvloc,
   double const k_cfl = k;
 
   double s_cfl = (k0 > 0.0) ? (k_cfl / k0) : 1.0;
-  if (!std::isfinite(s_cfl) || s_cfl <= 0.0) {
+  if (!std::isfinite(s_cfl) || s_cfl <= 0.0)
+  {
     s_cfl = err_min;
   }
 
-  auto clamp_value = [](double value, double lower, double upper) {
+  auto clamp_value = [](double value, double lower, double upper)
+  {
     return std::max(lower, std::min(value, upper));
   };
 
@@ -2244,7 +2369,8 @@ void VD_NSESolver::adapt_dt(Function const &Fvloc,
 
   double ratio_raw = safety * std::pow(err_now, -kp);
 
-  if (dt_pid_has_prev_error_) {
+  if (dt_pid_has_prev_error_)
+  {
     double err_prev = clamp_value(dt_pid_prev_error_, err_min, err_max);
     ratio_raw *= std::pow(err_prev, -ki);
     double err_ratio = clamp_value(err_now / err_prev, err_min, err_max);
@@ -2265,12 +2391,16 @@ void VD_NSESolver::adapt_dt(Function const &Fvloc,
        ratio_raw, ratio_final, s_cfl, err_now, redo_step ? "true" : "false");
   set_log_active(false);
 
-  if (redo_step) {
-  } else {
+  if (redo_step)
+  {
+  }
+  else
+  {
     dt_pid_prev_error_ = err_now;
     dt_pid_has_prev_error_ = true;
 
-    if (t + k > Time) {
+    if (t + k > Time)
+    {
       k = std::fabs(Time - t);
     }
   }
@@ -2278,16 +2408,19 @@ void VD_NSESolver::adapt_dt(Function const &Fvloc,
 
 void VD_NSESolver::get_rho_min(Function const &Frho,
                                std::vector<dolfin::la_index> const &dof_M,
-                               double &rho_min) {
+                               double &rho_min)
+{
   std::vector<double> Frho_arr(dof_M.size());
   Frho.vector()->get_local(&Frho_arr[0], dof_M.size(), &dof_M[0]);
 
   std::size_t num_cell_nodes =
       Frho.function_space()->dofmap()->max_element_dofs() / Frho.value_size();
   std::size_t ii = 0;
-  for (CellIterator cell(*Frho.function_space()->mesh()); !cell.end(); ++cell) {
+  for (CellIterator cell(*Frho.function_space()->mesh()); !cell.end(); ++cell)
+  {
     double rho_loc = 99999.9;
-    for (std::size_t node = 0; node < num_cell_nodes; ++node, ++ii) {
+    for (std::size_t node = 0; node < num_cell_nodes; ++node, ++ii)
+    {
       rho_loc = std::min(rho_loc, Frho_arr[ii]);
     }
 
@@ -2312,36 +2445,42 @@ std::shared_ptr<Function> &VD_NSESolver::get_Fh() { return Fh_PX_; }
 double VD_NSESolver::get_mesh_volume() { return mesh_volume_; }
 double VD_NSESolver::get_final_dt() { return dt_; }
 
-void VD_NSESolver::first_order_iteration() {
+void VD_NSESolver::first_order_iteration()
+{
   store_previous_solutions();
   time_step_iteration(1);
   return;
 }
 
-void VD_NSESolver::second_order_iteration() {
+void VD_NSESolver::second_order_iteration()
+{
   store_previous_solutions();
   time_step_iteration(2);
   return;
 }
 
-void VD_NSESolver::third_order_iteration() {
+void VD_NSESolver::third_order_iteration()
+{
   store_previous_solutions();
   time_step_iteration(3);
   return;
 }
 
-void VD_NSESolver::fourth_order_iteration() {
+void VD_NSESolver::fourth_order_iteration()
+{
   store_previous_solutions();
   time_step_iteration(4);
   return;
 }
 
-void VD_NSESolver::time_step_iteration(int time_order) {
+void VD_NSESolver::time_step_iteration(int time_order)
+{
 
   bool crank_nicolson = false;
   std::string const demo_type = parameters["demo_type"];
 
-  switch (time_order) {
+  switch (time_order)
+  {
   case 0:
     break;
   case 1:
@@ -2393,13 +2532,15 @@ void VD_NSESolver::time_step_iteration(int time_order) {
 
   num_iter_mom0 = 10;
   while ((num_iter_mom0 > 0 || num_iter_rho > 0) &&
-         newton_iteration_counter < number_of_newton_iterations) {
+         newton_iteration_counter < number_of_newton_iterations)
+  {
 
     compute_LPS();
 
     newton_iteration_counter++;
 
-    if (constant_density == 0) {
+    if (constant_density == 0)
+    {
       tic();
 
       TRACER_EQ_.a->set_some_coefficients(coefficients_rho_u);
@@ -2407,28 +2548,34 @@ void VD_NSESolver::time_step_iteration(int time_order) {
       assemble(*A_con_, *TRACER_EQ_.a);
       assemble(*b_con_, *TRACER_EQ_.L);
 
-      if (time_order == 2) {
+      if (time_order == 2)
+      {
         time_ += 0.5 * dt_;
       }
       // apply Dirichlet bc for density
-      for (std::size_t i = 0; i < bcs_rho_->size(); ++i) {
+      for (std::size_t i = 0; i < bcs_rho_->size(); ++i)
+      {
         (*bcs_rho_)[i]->apply(*A_con_, *b_con_);
       }
-      if (time_order == 2) {
+      if (time_order == 2)
+      {
         time_ -= 0.5 * dt_;
       }
 
-      if (initial_guess_extrapolation == 1 && newton_iteration_counter == 1) {
+      if (initial_guess_extrapolation == 1 && newton_iteration_counter == 1)
+      {
         NV_->extrapolation4(*Frho_n_, *Frho_nm1_, *Frho_nm2_, *Frho_nm3_, dt_,
                             dt0_, dt00_, dt000_, *Frho_np1_);
       }
 
       num_iter_rho = lsrho_->solve(*A_con_, *Frho_np1_->vector(), *b_con_);
     }
-    if (!constantTemperature) {
+    if (!constantTemperature)
+    {
 
       tic();
-      if (initial_guess_extrapolation == 1 && newton_iteration_counter == 1) {
+      if (initial_guess_extrapolation == 1 && newton_iteration_counter == 1)
+      {
         NV_->extrapolation4(*FT_n_, *FT_nm1_, *FT_nm2_, *FT_nm3_, dt_, dt0_,
                             dt00_, dt000_, *FT_np1_);
         NV_->extrapolation4(*FS_n_, *FS_nm1_, *FS_nm2_, *FS_nm3_, dt_, dt0_,
@@ -2449,22 +2596,27 @@ void VD_NSESolver::time_step_iteration(int time_order) {
       assemble(*A_con_, *TRACER_EQ_.a);
       assemble(*b_con_, *TRACER_EQ_.L);
 
-      if (time_order == 2) {
+      if (time_order == 2)
+      {
         time_ += 0.5 * dt_;
       }
-      for (std::size_t i = 0; i < bcs_T_->size(); ++i) {
+      for (std::size_t i = 0; i < bcs_T_->size(); ++i)
+      {
         (*bcs_T_)[i]->apply(*A_con_, *b_con_);
       }
-      if (melt_with_virtual_flux == 0) {
+      if (melt_with_virtual_flux == 0)
+      {
         melt_DBC_T_->apply(*A_con_, *b_con_);
       }
-      if (time_order == 2) {
+      if (time_order == 2)
+      {
         time_ -= 0.5 * dt_;
       }
 
       num_iter_rho = lsrho_->solve(*A_con_, *FT_np1_->vector(), *b_con_);
 
-      if (demo_type == "ocean") {
+      if (demo_type == "ocean")
+      {
 
         TRACER_EQ_.a->set_some_coefficients(coefficients_only_S);
         TRACER_EQ_.L->set_some_coefficients(coefficients_only_S);
@@ -2472,17 +2624,21 @@ void VD_NSESolver::time_step_iteration(int time_order) {
         assemble(*A_con_, *TRACER_EQ_.a);
         assemble(*b_con_, *TRACER_EQ_.L);
 
-        if (time_order == 2) {
+        if (time_order == 2)
+        {
           time_ += 0.5 * dt_;
         }
-        for (std::size_t i = 0; i < bcs_S_->size(); ++i) {
+        for (std::size_t i = 0; i < bcs_S_->size(); ++i)
+        {
           (*bcs_S_)[i]->apply(*A_con_, *b_con_);
         }
-        if (melt_with_virtual_flux == 0) {
+        if (melt_with_virtual_flux == 0)
+        {
           melt_DBC_S_->apply(*A_con_, *b_con_);
         }
 
-        if (time_order == 2) {
+        if (time_order == 2)
+        {
           time_ -= 0.5 * dt_;
         }
 
@@ -2495,10 +2651,12 @@ void VD_NSESolver::time_step_iteration(int time_order) {
     set_log_active(false);
 
     // skip momentum solve for pure advection demo
-    if (demo_type != "advection") {
+    if (demo_type != "advection")
+    {
 
       // FIXME: cleaner way to do this?
-      if (demo_type == "ocean") {
+      if (demo_type == "ocean")
+      {
         compute_outflow_pressure();
       }
 
@@ -2533,7 +2691,8 @@ void VD_NSESolver::time_step_iteration(int time_order) {
       *C_mass = c_mass;
 
       // specific to saddle point
-      if (c_brezzi == 0.0) {
+      if (c_brezzi == 0.0)
+      {
         A11->zero();
         // pressure is solved for p^n+1 not p^n+1/2
         b1->zero();
@@ -2544,33 +2703,40 @@ void VD_NSESolver::time_step_iteration(int time_order) {
       assemble(*ASchur, *aSchur);
 
       // apply SlipBC
-      if (slip_bcs_) {
-        for (std::size_t i = 0; i < slip_bcs_->size(); ++i) {
+      if (slip_bcs_)
+      {
+        for (std::size_t i = 0; i < slip_bcs_->size(); ++i)
+        {
           (*slip_bcs_)[i]->apply_system(*A00, *A01, *b0);
         }
       }
 
-      if (melt_with_virtual_flux == 0 || melt_with_virtual_flux == 2) {
+      if (melt_with_virtual_flux == 0 || melt_with_virtual_flux == 2)
+      {
         inflow_bc_melt_->apply_inflow_system(*A00, *A01, *b0,
                                              *F_melt_VV_->vector());
       }
 
-      if (time_order == 2) {
+      if (time_order == 2)
+      {
         time_ += 0.5 * dt_;
       }
       // apply Dirichlet bc
-      for (std::size_t i = 0; i < bcs_u_->size(); ++i) {
+      for (std::size_t i = 0; i < bcs_u_->size(); ++i)
+      {
         (*bcs_u_)[i]->apply(*A00, *b0);
         (*bcs_u_)[i]->zero(*A01);
       }
 
       // apply Dirichlet bc
-      for (std::size_t i = 0; i < bcs_P_->size(); ++i) {
+      for (std::size_t i = 0; i < bcs_P_->size(); ++i)
+      {
         // (*bcs_P_)[i]->apply(*A11, *b1);
         // (*bcs_P_)[i]->apply(*ASchur, *b1);
         // (*bcs_P_)[i]->zero(*A10);
       }
-      if (time_order == 2) {
+      if (time_order == 2)
+      {
         time_ -= 0.5 * dt_;
       }
 
@@ -2578,7 +2744,8 @@ void VD_NSESolver::time_step_iteration(int time_order) {
       info("Assembly of momentum forms took = %f sec", toc());
       set_log_active(false);
 
-      if (initial_guess_extrapolation == 1 && newton_iteration_counter == 1) {
+      if (initial_guess_extrapolation == 1 && newton_iteration_counter == 1)
+      {
         NV_->extrapolation4(*Fu_n_, *Fu_nm1_, *Fu_nm2_, *Fu_nm3_, dt_, dt0_,
                             dt00_, dt000_, *Fu_np1_);
 
@@ -2592,7 +2759,8 @@ void VD_NSESolver::time_step_iteration(int time_order) {
       Fu_np1_->vector()->apply("insert");
       FP_np1_->vector()->apply("insert");
 
-      if (remove_pressure_average) {
+      if (remove_pressure_average)
+      {
         Form_Pavg->set_coefficient("p", FP_np1_);
         Pavg = assemble_functional(*Form_Pavg, *scalar) / mesh_volume_;
         *FP_np1_->vector() -= Pavg;
@@ -2610,10 +2778,10 @@ void VD_NSESolver::time_step_iteration(int time_order) {
     }
   }
   *C_newton_ = 0.0;
-
 }
 
-void VD_NSESolver::constant_dt_init() {
+void VD_NSESolver::constant_dt_init()
+{
 
   auto Form_Pavg = FUNC_->Pavg;
   double Pavg;
@@ -2626,12 +2794,14 @@ void VD_NSESolver::constant_dt_init() {
   Frho_np1_->interpolate(*initial_rho_);
   FP_np1_->interpolate(*initial_P_);
 
-  if (!constantTemperature) {
+  if (!constantTemperature)
+  {
     FT_np1_->interpolate(*initial_T_);
     FS_np1_->interpolate(*initial_S_);
   }
 
-  if (remove_pressure_average) {
+  if (remove_pressure_average)
+  {
     Form_Pavg->set_coefficient("p", FP_np1_);
     Pavg = assemble_functional(*Form_Pavg, *scalar) / mesh_volume_;
     *FP_np1_->vector() -= Pavg;
@@ -2644,12 +2814,14 @@ void VD_NSESolver::constant_dt_init() {
   Fu_np1_->interpolate(initial_u);
   Frho_np1_->interpolate(*initial_rho_);
   FP_np1_->interpolate(*initial_P_);
-  if (!constantTemperature) {
+  if (!constantTemperature)
+  {
     FT_np1_->interpolate(*initial_T_);
     FS_np1_->interpolate(*initial_S_);
   }
 
-  if (remove_pressure_average) {
+  if (remove_pressure_average)
+  {
     Form_Pavg->set_coefficient("p", FP_np1_);
     Pavg = assemble_functional(*Form_Pavg, *scalar) / mesh_volume_;
     *FP_np1_->vector() -= Pavg;
@@ -2662,12 +2834,14 @@ void VD_NSESolver::constant_dt_init() {
   Fu_np1_->interpolate(initial_u);
   Frho_np1_->interpolate(*initial_rho_);
   FP_np1_->interpolate(*initial_P_);
-  if (!constantTemperature) {
+  if (!constantTemperature)
+  {
     FT_np1_->interpolate(*initial_T_);
     FS_np1_->interpolate(*initial_S_);
   }
 
-  if (remove_pressure_average) {
+  if (remove_pressure_average)
+  {
     Form_Pavg->set_coefficient("p", FP_np1_);
     Pavg = assemble_functional(*Form_Pavg, *scalar) / mesh_volume_;
     *FP_np1_->vector() -= Pavg;
@@ -2677,12 +2851,14 @@ void VD_NSESolver::constant_dt_init() {
   Fu_np1_->interpolate(initial_u);
   Frho_np1_->interpolate(*initial_rho_);
   FP_np1_->interpolate(*initial_P_);
-  if (!constantTemperature) {
+  if (!constantTemperature)
+  {
     FT_np1_->interpolate(*initial_T_);
     FS_np1_->interpolate(*initial_S_);
   }
 
-  if (remove_pressure_average) {
+  if (remove_pressure_average)
+  {
     Form_Pavg->set_coefficient("p", FP_np1_);
     Pavg = assemble_functional(*Form_Pavg, *scalar) / mesh_volume_;
     *FP_np1_->vector() -= Pavg;
@@ -2691,7 +2867,8 @@ void VD_NSESolver::constant_dt_init() {
   store_previous_solutions();
 }
 
-void VD_NSESolver::redo_compute_solutions() {
+void VD_NSESolver::redo_compute_solutions()
+{
 
   // Store previous solutions
   *Fu_np1_->vector() = *Fu_n_->vector();
@@ -2705,11 +2882,13 @@ void VD_NSESolver::redo_compute_solutions() {
   // I should actually use previous viscosity here...
 }
 
-void VD_NSESolver::compute_solutions() {
+void VD_NSESolver::compute_solutions()
+{
 
   int const time_order = parameters["time_order"];
 
-  switch (time_order) {
+  switch (time_order)
+  {
   case 1:
     first_order_iteration();
     break;
@@ -2728,11 +2907,13 @@ void VD_NSESolver::compute_solutions() {
   }
 }
 
-void VD_NSESolver::compute_time_derivatives() {
+void VD_NSESolver::compute_time_derivatives()
+{
 
   int order = parameters["residual_BDF"];
 
-  switch (order) {
+  switch (order)
+  {
   case 1:
     NV_->compute_BDF1(*Fu_np1_, *Fu_n_, dt_, *Fu_t_);
     NV_->compute_BDF1(*Frho_np1_, *Frho_n_, dt_, *Frho_t_);
@@ -2771,7 +2952,8 @@ void VD_NSESolver::compute_time_derivatives() {
 }
 
 //------------------------------------------------------------------------------
-void VD_NSESolver::compute_UU() {
+void VD_NSESolver::compute_UU()
+{
 
   VLOC_EQ_.L->set_coefficient("u_np1", Fu_np1_);
   VLOC_EQ_.L->set_coefficient("C_directional_wave_speed",
@@ -2793,7 +2975,8 @@ void VD_NSESolver::compute_UU() {
   // instead. This will be more efficient and look nicer. Need to store a larger
   // matrix though :)
   int directional_wave_speed = parameters["directional_wave_speed"];
-  if (directional_wave_speed == 1) {
+  if (directional_wave_speed == 1)
+  {
     *C_directional_wave_speed_ = 1.0;
     VLOC_EQ_.L->set_coefficient("e_i", e_x_);
     assemble(VLOC_EQ_.b, *VLOC_EQ_.L);
@@ -2807,19 +2990,23 @@ void VD_NSESolver::compute_UU() {
     ls_mass_->solve(VLOC_EQ_.A, *Fvloc_y_->vector(), VLOC_EQ_.b);
     // Fvloc_y_->vector()->abs();
 
-    if (dim_ == 3) {
+    if (dim_ == 3)
+    {
       VLOC_EQ_.L->set_coefficient("e_i", e_z_);
       assemble(VLOC_EQ_.b, *VLOC_EQ_.L);
       ls_mass_->solve(VLOC_EQ_.A, *Fvloc_z_->vector(), VLOC_EQ_.b);
       // Fvloc_z_->vector()->abs();
     }
-  } else {
+  }
+  else
+  {
     *Fvloc_x_->vector() = *Fvloc_->vector();
     *Fvloc_y_->vector() = *Fvloc_->vector();
     *Fvloc_z_->vector() = *Fvloc_->vector();
   }
 
-  if (project_uu) {
+  if (project_uu)
+  {
     VLOC_EQ_.a->set_coefficient("C_project_uu", C_one_);
     VLOC_EQ_.L->set_coefficient("C_project_uu", C_one_);
     assemble(VLOC_EQ_.A, *VLOC_EQ_.a);
@@ -2834,28 +3021,32 @@ void VD_NSESolver::compute_UU() {
 
 // FIXME: it would be faster to solve outflow pressure on the manifold. But it
 // is not so slow this way so it is OK
-void VD_NSESolver::compute_outflow_pressure() {  
+void VD_NSESolver::compute_outflow_pressure()
+{
   tic();
 
   OUTFLOW_EQ_.L->set_some_coefficients(coefficients_rho_u);
   OUTFLOW_EQ_.L->set_some_coefficients(coefficients_T);
   OUTFLOW_EQ_.L->set_some_coefficients(coefficients_S);
 
-  if (OUTFLOW_EQ_.A.empty()) {
+  if (OUTFLOW_EQ_.A.empty())
+  {
     assemble(OUTFLOW_EQ_.A, *OUTFLOW_EQ_.a);
   }
 
   assemble(OUTFLOW_EQ_.b, *OUTFLOW_EQ_.L);
 
   // apply Dirichlet bc
-  for (std::size_t i = 0; i < bcs_P_->size(); ++i) {
+  for (std::size_t i = 0; i < bcs_P_->size(); ++i)
+  {
     // FIXME: now i overrided the usual pressure bc since i am not using that.
     // There is no way to put Dirichlet BC on pressure at outflow right now...
     // :/
     (*bcs_P_)[i]->apply(OUTFLOW_EQ_.A, OUTFLOW_EQ_.b);
   }
 
-  if (OUTFLOW_EQ_.ls == nullptr) {
+  if (OUTFLOW_EQ_.ls == nullptr)
+  {
     double solver_tolerance_tracer = parameters["solver_tolerance_tracer"];
     OUTFLOW_EQ_.ls = std::make_shared<LinearSolver>("cg", "hypre_amg");
     OUTFLOW_EQ_.ls->parameters["relative_tolerance"] = solver_tolerance_tracer;
@@ -2870,24 +3061,29 @@ void VD_NSESolver::compute_outflow_pressure() {
   set_log_active(false);
 }
 
-void VD_NSESolver::compute_LPS() {
-  if (*C_max_vms_ == 0.0) {
+void VD_NSESolver::compute_LPS()
+{
+  if (*C_max_vms_ == 0.0)
+  {
     return;
   }
   tic();
   std::string const demo_type = parameters["demo_type"];
 
   LPS_EQ_.L->set_some_coefficients(coefficients_rho_u);
-  if (constant_density == 0) {
+  if (constant_density == 0)
+  {
     assemble(LPS_EQ_.b, *LPS_EQ_.L);
     LPS_EQ_.ls->solve(LPS_EQ_.A, *Fgrad_rho_->vector(), LPS_EQ_.b);
   }
 
-  if (demo_type == "advection") {
+  if (demo_type == "advection")
+  {
     return;
   }
 
-  if (!constantTemperature) {
+  if (!constantTemperature)
+  {
 
     LPS_EQ_.L->set_some_coefficients(coefficients_only_T);
     assemble(LPS_EQ_.b, *LPS_EQ_.L);
@@ -2898,8 +3094,8 @@ void VD_NSESolver::compute_LPS() {
     LPS_EQ_.ls->solve(LPS_EQ_.A, *Fgrad_S_->vector(), LPS_EQ_.b);
   }
 
-  
-  if (c_brezzi > 0) {
+  if (c_brezzi > 0)
+  {
     LPS_EQ_.L->set_some_coefficients(coefficients_only_P);
     assemble(LPS_EQ_.b, *LPS_EQ_.L);
     LPS_EQ_.ls->solve(LPS_EQ_.A, *Fgrad_p_->vector(), LPS_EQ_.b);
@@ -2914,7 +3110,8 @@ void VD_NSESolver::compute_LPS() {
   set_log_active(false);
 }
 
-void VD_NSESolver::compute_melting() {
+void VD_NSESolver::compute_melting()
+{
 
   int rank;
   MPI_Comm_rank(mesh_->mpi_comm(), &rank);
@@ -2975,9 +3172,10 @@ void VD_NSESolver::compute_melting() {
   F_melting_flux_S_->vector()->get_local(flux_arr_S);
   F_melting_flux_T_->vector()->get_local(flux_arr_T);
 
-  for (CellIterator c(*mesh_); !c.end(); ++c) {
+  for (CellIterator c(*mesh_); !c.end(); ++c)
+  {
     auto cell_facets =
-        c->entities(dim_ - 1); // global facet indices for this cell
+        c->entities(dim_ - 1);                       // global facet indices for this cell
     std::size_t nfacets = c->num_entities(dim_ - 1); // edges in 2D, faces in 3D
     auto gdofs = dm->cell_dofs(c->index());
     std::vector<double> dof_coords;
@@ -2986,18 +3184,21 @@ void VD_NSESolver::compute_melting() {
     double u_prev = 0.0;
     std::vector<double> s_m_prev_values(dim_, mass_S / mesh_volume_);
     std::vector<double> t_m_prev_values(dim_, mass_T / mesh_volume_);
-    for (std::size_t lf = 0; lf < nfacets; ++lf) {
+    for (std::size_t lf = 0; lf < nfacets; ++lf)
+    {
       std::size_t global_facet_index = cell_facets[lf];
       Facet facet(*mesh_, global_facet_index);
 
       // skip facets not on boundary and not on ice-shelf
-      if (!facet.exterior() || (*sub_domains_)[global_facet_index] != 1) {
+      if (!facet.exterior() || (*sub_domains_)[global_facet_index] != 1)
+      {
         continue;
       }
       std::vector<std::size_t> ldofs;
       dm->tabulate_facet_dofs(ldofs, lf);
 
-      for (auto ld : ldofs) {
+      for (auto ld : ldofs)
+      {
         std::size_t dof = gdofs[ld];
 
         // Only write if this rank OWNS the dof
@@ -3005,7 +3206,8 @@ void VD_NSESolver::compute_melting() {
           continue;
 
         // Coordinates of this dof:
-        for (std::size_t i = 0; i < dim_; ++i) {
+        for (std::size_t i = 0; i < dim_; ++i)
+        {
           coors[i] = dof_coords[dim_ * dof + i];
         }
 
@@ -3028,11 +3230,13 @@ void VD_NSESolver::compute_melting() {
         // numerical P and simple p gives almost the same value
         double P = g * rho_avg * std::abs(coors[1]);
 
-        if (melting_with_rv > 0) {
+        if (melting_with_rv > 0)
+        {
           Fh_PX_->eval(h_value, coors);
 
           double h = 0.0;
-          for (std::size_t i = 0; i < dim_; i++) {
+          for (std::size_t i = 0; i < dim_; i++)
+          {
             h += h_value[i] * h_value[i];
           }
           h = flux_h_factor * sqrt(h);
@@ -3045,7 +3249,8 @@ void VD_NSESolver::compute_melting() {
           u_values[0] = u_value[0];
           Fvloc_y_->eval(u_value, coors);
           u_values[1] = u_value[0];
-          if (dim_ == 3) {
+          if (dim_ == 3)
+          {
             Fvloc_z_->eval(u_value, coors);
             u_values[2] = u_value[0];
           }
@@ -3056,15 +3261,20 @@ void VD_NSESolver::compute_melting() {
 
           Fnormal_->eval(normal_values, coors);
           double u_n = 0.0;
-          if (melting_with_rv == 1) {
+          if (melting_with_rv == 1)
+          {
 
-            for (int i = 0; i < dim_; i++) {
+            for (int i = 0; i < dim_; i++)
+            {
               u_n = u_values[i] * normal_values[i];
             }
-          } else if (melting_with_rv == 2) {
+          }
+          else if (melting_with_rv == 2)
+          {
             // scalar valued RV
             double vloc = 0.0;
-            for (std::size_t i = 0; i < dim_; i++) {
+            for (std::size_t i = 0; i < dim_; i++)
+            {
               vloc += u_values[i] * u_values[i];
             }
             vloc = sqrt(vloc);
@@ -3075,11 +3285,13 @@ void VD_NSESolver::compute_melting() {
                                        (std::pow(sc_S, 2.0 / 3.0)));
           gamma_T = (kappa_T / h + c_max * abs(u_n) * res_u_value[0] * 1 /
                                        (std::pow(sc_T, 2.0 / 3.0)));
-
-        } else {
+        }
+        else
+        {
           friction_vel->eval(friction_value, coors);
 
-          if (isnan(friction_value[0])) {
+          if (isnan(friction_value[0]))
+          {
             set_log_active(true);
             dolfin::warning("friction velocity at index %d is nan. Setting to "
                             "previous value u_prev = %f",
@@ -3101,7 +3313,8 @@ void VD_NSESolver::compute_melting() {
         double Sm = ff_S_value[0];
         double Tm = ff_T_value[0];
 
-        if (isnan(Sm)) {
+        if (isnan(Sm))
+        {
           Sm = s_m_prev_values[0];
           set_log_active(true);
           dolfin::warning(
@@ -3110,7 +3323,8 @@ void VD_NSESolver::compute_melting() {
           set_log_active(false);
         }
 
-        if (isnan(Tm)) {
+        if (isnan(Tm))
+        {
           Tm = t_m_prev_values[0];
           set_log_active(true);
           dolfin::warning(
@@ -3124,10 +3338,13 @@ void VD_NSESolver::compute_melting() {
         double Tb = solution[1];
         mb = solution[2];
 
-        if (melt_with_virtual_flux == 1) {
+        if (melt_with_virtual_flux == 1)
+        {
           flux_S = (gamma_S + mb) * (Sm - Sb);
           flux_T = (gamma_T + mb) * (Tm - Tb);
-        } else if (melt_with_virtual_flux == 2) {
+        }
+        else if (melt_with_virtual_flux == 2)
+        {
           // volume flux according to Assay-Davis et al 2016
           flux_S = 0.0; // Lukas: It feels more reasonable if it would be:
                         // gamma_S * (Sm - Sb) - mb * Sb;
@@ -3160,7 +3377,8 @@ void VD_NSESolver::compute_melting() {
 
   const int smooth_melting = parameters["smooth_melting"];
 
-  if (smooth_melting >= 1) {
+  if (smooth_melting >= 1)
+  {
     MANIFOLD_EQ_.L->set_coefficient("m_", Fmelt_manifold_);
 
     Fmelt_manifold_->interpolate(*F_melt_);
@@ -3184,7 +3402,8 @@ void VD_NSESolver::compute_melting() {
     // Do interpolation manually because LagrangeInterpolation is slow
   }
 
-  if (melt_with_virtual_flux == 0) {
+  if (melt_with_virtual_flux == 0)
+  {
 
     FS_b_->vector()->set_local(s_b_arr);
     FS_b_->vector()->apply("insert");
@@ -3198,14 +3417,16 @@ void VD_NSESolver::compute_melting() {
     melt_vector_bc0->apply(*F_melt_VV_->vector());
     melt_vector_bc1->apply(*F_melt_VV_->vector());
 
-    if (dim_ == 3) {
+    if (dim_ == 3)
+    {
       melt_vector_bc2->apply(*F_melt_VV_->vector());
     }
   }
 }
 
 void VD_NSESolver::interpolate_from_manifold_to_domain(
-    std::shared_ptr<Function> F_domain, std::shared_ptr<Function> F_manifold) {
+    std::shared_ptr<Function> F_domain, std::shared_ptr<Function> F_manifold)
+{
 
   auto fe = M_->element();
   auto dm = M_->dofmap();
@@ -3219,7 +3440,8 @@ void VD_NSESolver::interpolate_from_manifold_to_domain(
 
   F_domain->vector()->get_local(domain_arr);
 
-  for (CellIterator c(*mesh_); !c.end(); ++c) {
+  for (CellIterator c(*mesh_); !c.end(); ++c)
+  {
     // tabulate_entity_dofs();
     auto cell_facets = c->entities(1); // global facet indices for this cell
     std::size_t nfacets = c->num_entities(1);
@@ -3229,19 +3451,22 @@ void VD_NSESolver::interpolate_from_manifold_to_domain(
     dolfin::Array<double> coors(dim_);
     dof_coords = M_->tabulate_dof_coordinates();
 
-    for (std::size_t lf = 0; lf < nfacets; ++lf) {
+    for (std::size_t lf = 0; lf < nfacets; ++lf)
+    {
       std::size_t global_facet_index = cell_facets[lf];
       Facet facet(*mesh_, global_facet_index);
 
       // skip facets not on boundary and not on ice-shelf
-      if (!facet.exterior() || (*sub_domains_)[global_facet_index] != 1) {
+      if (!facet.exterior() || (*sub_domains_)[global_facet_index] != 1)
+      {
         continue;
       }
 
       std::vector<std::size_t> ldofs;
       dm->tabulate_facet_dofs(ldofs, lf);
 
-      for (auto ld : ldofs) {
+      for (auto ld : ldofs)
+      {
         std::size_t dof = gdofs[ld];
 
         // Only write if this rank OWNS the dof
@@ -3249,7 +3474,8 @@ void VD_NSESolver::interpolate_from_manifold_to_domain(
           continue;
 
         // Coordinates of this dof:
-        for (std::size_t i = 0; i < dim_; ++i) {
+        for (std::size_t i = 0; i < dim_; ++i)
+        {
           coors[i] = dof_coords[dim_ * dof + i];
         }
 
@@ -3264,7 +3490,8 @@ void VD_NSESolver::interpolate_from_manifold_to_domain(
   F_domain->vector()->apply("insert");
 }
 
-void VD_NSESolver::store_previous_solutions() {
+void VD_NSESolver::store_previous_solutions()
+{
 
   *Fu_nm3_->vector() = *Fu_nm2_->vector();
   *Fu_nm2_->vector() = *Fu_nm1_->vector();
@@ -3293,7 +3520,8 @@ void VD_NSESolver::store_previous_solutions() {
 }
 
 // not used
-void VD_NSESolver::relaxation_conservation_fix() {
+void VD_NSESolver::relaxation_conservation_fix()
+{
 
   int const time_order = parameters["time_order"];
   auto Form_kinetic_energy = FUNC_->kinetic_energy;
@@ -3336,8 +3564,10 @@ void VD_NSESolver::relaxation_conservation_fix() {
   Fu_np1_->vector()->axpy(1.0, *Fu_temp->vector());
 }
 
-double VD_NSESolver::assemble_functional(const Form &a, Scalar &s) {
-  if (a.rank() != 0) {
+double VD_NSESolver::assemble_functional(const Form &a, Scalar &s)
+{
+  if (a.rank() != 0)
+  {
     dolfin_error("assemble.cpp", "assemble form",
                  "Expecting a scalar form but rank is %d", a.rank());
   }
@@ -3350,18 +3580,22 @@ double VD_NSESolver::assemble_functional(const Form &a, Scalar &s) {
 }
 
 // Mark bad cells based on some criteria. Not used currently.
-void VD_NSESolver::add_noslip_on_bad_cells() {
+void VD_NSESolver::add_noslip_on_bad_cells()
+{
 
   double threshold_bad_cell = parameters["threshold_bad_cell"];
   std::shared_ptr<Form> boundary_marker_a;
   std::shared_ptr<Form> boundary_marker_L;
   std::shared_ptr<FunctionSpace> V_temp;
-  if (dim_ == 2) {
+  if (dim_ == 2)
+  {
     V_temp = std::make_shared<BoundaryMarker2D::FunctionSpace>(mesh_);
     boundary_marker_a =
         std::make_shared<BoundaryMarker2D::BilinearForm>(V_temp, V_temp);
     boundary_marker_L = std::make_shared<BoundaryMarker2D::LinearForm>(V_temp);
-  } else if (dim_ == 3) {
+  }
+  else if (dim_ == 3)
+  {
     V_temp = std::make_shared<BoundaryMarker3D::FunctionSpace>(mesh_);
     boundary_marker_a =
         std::make_shared<BoundaryMarker3D::BilinearForm>(V_temp, V_temp);
@@ -3375,7 +3609,8 @@ void VD_NSESolver::add_noslip_on_bad_cells() {
       parameters["bad_cells_boundary_condition"];
   auto C_directional = std::make_shared<Constant>(0.0);
 
-  if (bad_cells_boundary_condition == 2) {
+  if (bad_cells_boundary_condition == 2)
+  {
     *C_directional = 1.0;
   }
 
@@ -3395,16 +3630,21 @@ void VD_NSESolver::add_noslip_on_bad_cells() {
   dolfin::Array<double> value_array(1);
   const std::size_t gdim = mesh_->geometry().dim();
   dolfin::Array<double> point_array(gdim);
-  for (dolfin::CellIterator cell(*mesh_); !cell.end(); ++cell) {
+  for (dolfin::CellIterator cell(*mesh_); !cell.end(); ++cell)
+  {
     const auto midpoint = cell->midpoint();
 
-    for (std::size_t i = 0; i < gdim; ++i) {
+    for (std::size_t i = 0; i < gdim; ++i)
+    {
       point_array[i] = midpoint[i];
     }
     F_bad_cells_cg1_->eval(value_array, point_array);
-    if (value_array[0] > threshold_bad_cell) {
+    if (value_array[0] > threshold_bad_cell)
+    {
       (*marker_bad_cells_)[cell->index()] = 1;
-    } else {
+    }
+    else
+    {
       (*marker_bad_cells_)[cell->index()] = 0;
     }
   }

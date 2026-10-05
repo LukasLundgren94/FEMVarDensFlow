@@ -1,0 +1,32 @@
+# This is a Spack Environment file.
+#
+# It describes a set of packages to be installed, along with
+# configuration settings.
+spack:
+  # add package specs to the `specs` list
+  specs:
+  - fenics@2019.1.0.post0 +python cflags="-O3" fflags="-O3" ~openmp ++zlib %gcc@11.5.0 ^python@3.10.20 ^boost@1.83.0 ^py-setuptools@80.9.0:82.0.1 ^py-sympy@1.13.3 ^py-numpy@1.26.4 ^petsc@3.20.6 ^slepc@3.20.2 ^py-cython@3.0.12
+  view:
+    default:
+      root: .spack-env/view
+      exclude:
+      - py-setuptools
+  concretizer:
+    unify: true
+    targets:
+      granularity: generic
+      host_compatible: true
+  packages:
+    gcc:
+      externals:
+      - spec: gcc@11.5.0 languages:='c,c++,fortran'
+        prefix: /usr
+        extra_attributes:
+          compilers:
+            c: /usr/bin/gcc
+            cxx: /usr/bin/g++
+            fortran: /usr/bin/gfortran
+    py-fenics-ufl:
+      deprecation:
+        allow:
+        - labels: [version_deprecated]

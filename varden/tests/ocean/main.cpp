@@ -39,30 +39,43 @@
 
 using namespace dolfin;
 
-namespace {
+namespace
+{
 
-template <typename... Args>
-void log_info_once(char const *msg, Args &&...args) {
-  set_log_active(true);
-  info(msg, std::forward<Args>(args)...);
-  set_log_active(false);
-}
+  template <typename... Args>
+  void log_info_once(char const *msg, Args &&...args)
+  {
+    int rank = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank != 0)
+      return;
 
-template <typename Setter>
-void apply_parameter_if_present(Parameters const &params, char const *key,
-                                Setter setter, char const *missing_message) {
-  try {
-    setter(params[key]);
-  } catch (...) {
-    if (missing_message) {
-      log_info_once("%s", missing_message);
+    set_log_active(true);
+    info(msg, std::forward<Args>(args)...);
+    set_log_active(false);
+  }
+
+  template <typename Setter>
+  void apply_parameter_if_present(Parameters const &params, char const *key,
+                                  Setter setter, char const *missing_message)
+  {
+    try
+    {
+      setter(params[key]);
+    }
+    catch (...)
+    {
+      if (missing_message)
+      {
+        log_info_once("%s", missing_message);
+      }
     }
   }
-}
 
 } // namespace
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   MPI_Init(&argc, &argv);
   bool noslip = true;
   bool noslip_outflow = false;
@@ -103,7 +116,8 @@ int main(int argc, char *argv[]) {
 
   int melt_with_virtual_flux = solver_parameters["melt_with_virtual_flux"];
 
-  if (restoring_region_width > 0.0) {
+  if (restoring_region_width > 0.0)
+  {
     outflow_dirichlet = true;
   }
 
@@ -120,7 +134,8 @@ int main(int argc, char *argv[]) {
   mesh_file.read(*mesh);
 
   tic();
-  for (int i = 0; i < nRefinements; i++) {
+  for (int i = 0; i < nRefinements; i++)
+  {
     log_info_once("Mesh refinement %d", i);
     *mesh = refine(*mesh);
   }
@@ -172,13 +187,14 @@ int main(int argc, char *argv[]) {
   refine(*mesh_fine, *mesh_fine, false);
 
   V = fem_varden_flow::VD_NSEMomEquation::create_velocity_space(mesh,
-                                                        solver_parameters);
+                                                                solver_parameters);
   Q = fem_varden_flow::VD_NSEPressEquation::create_pressure_space(mesh,
-                                                          solver_parameters);
+                                                                  solver_parameters);
   M = fem_varden_flow::VD_NSETracerEquation::create_tracer_space(mesh,
-                                                         solver_parameters);
+                                                                 solver_parameters);
 
-  if (D == 2) {
+  if (D == 2)
+  {
     V1 = std::make_shared<VD_Mixed_2D_P1P1::CoefficientSpace_u_n>(mesh_fine);
     zeros = std::make_shared<Constant>(0, 0);
     u_in = std::make_shared<Constant>(0.0, 0.0);
@@ -188,7 +204,9 @@ int main(int argc, char *argv[]) {
     f_S = std::make_shared<Constant>(0.0, -g * beta_S);
     f_u_source =
         std::make_shared<Constant>(0.0, g * (-alpha_T * T_0 + beta_S * S_0));
-  } else if (D == 3) {
+  }
+  else if (D == 3)
+  {
     V1 = std::make_shared<VD_Mixed_3D_P1P1::CoefficientSpace_u_n>(mesh_fine);
     zeros = std::make_shared<Constant>(0, 0, 0);
     u_in = std::make_shared<Constant>(0.0, 0.0, 0.0);
@@ -215,7 +233,8 @@ int main(int argc, char *argv[]) {
   auto sub_domains = std::make_shared<MeshFunction<std::size_t>>(
       mesh, mesh->topology().dim() - 1, 0);
 
-  try {
+  try
+  {
     std::string const file_name_surface_mesh =
         solver_parameters["surface_mesh"];
     log_info_once("Marking subdomains from file");
@@ -227,15 +246,17 @@ int main(int argc, char *argv[]) {
 
     MeshFunction<std::size_t> cell_markers(mesh, mvc);
     *sub_domains = cell_markers;
-  } catch (...) {
+  }
+  catch (...)
+  {
     log_info_once("Surface_mesh not found in parameters, attempting to mark "
                   "subdomains manually.");
 
     complete_boundary->mark(
         *sub_domains,
-        1); // marks all boundary facets as 1. This represents ice shelf.
-    cross_section->mark(*sub_domains, 6); // important to mark first???
-    int direction = -1; // corresponds to down in christians code
+        1);                                          // marks all boundary facets as 1. This represents ice shelf.
+    cross_section->mark(*sub_domains, 6);            // important to mark first???
+    int direction = -1;                              // corresponds to down in christians code
     mark_facet_direction(sub_domains, direction, 2); // bed
     left->mark(*sub_domains, 3);                     // left inflow
     top_wall->mark(*sub_domains, 5);                 // top
@@ -243,7 +264,8 @@ int main(int argc, char *argv[]) {
     outflow_corners_top->mark(*sub_domains, 7);
     outflow_corners_bottom->mark(*sub_domains, 8);
 
-    if (D == 3) {
+    if (D == 3)
+    {
       auto z_wall = std::make_shared<ZWall>();
       z_wall->mark(*sub_domains, 2); // z min and max
     }
@@ -280,19 +302,24 @@ int main(int argc, char *argv[]) {
   std::shared_ptr<std::vector<DirichletBC *>> bcu =
       std::make_shared<std::vector<DirichletBC *>>();
   // auto &u_dirichlet = bcu.front();
-  if (noslip) {
+  if (noslip)
+  {
     bcu->push_back(&noslip_bed);
-    if (melt_with_virtual_flux == 1) {
+    if (melt_with_virtual_flux == 1)
+    {
       bcu->push_back(&noslip_ice);
     }
     bcu->push_back(&noslip_left);
     bcu->push_back(&outflow_corners_noslip_top);
     bcu->push_back(&outflow_corners_noslip_bottom);
-  } else {
+  }
+  else
+  {
     bcu->push_back(&outflow_corners_slip_top);
     bcu->push_back(&outflow_corners_slip_bottom);
   }
-  if (noslip_outflow) {
+  if (noslip_outflow)
+  {
     // u_dirichlet.push_back(&noslip_right);
     bcu->push_back(&noslip_right);
   }
@@ -311,12 +338,14 @@ int main(int argc, char *argv[]) {
   auto bcT = std::make_shared<std::vector<DirichletBC *>>();
   // bcT->push_back(&bc_inflow_T); // add later when grounding line is
   // included...
-  if (outflow_dirichlet) {
+  if (outflow_dirichlet)
+  {
     bcT->push_back(&bc_outflow_T);
   }
 
   auto bcS = std::make_shared<std::vector<DirichletBC *>>();
-  if (outflow_dirichlet) {
+  if (outflow_dirichlet)
+  {
     bcS->push_back(&bc_outflow_S);
   }
 
@@ -326,7 +355,8 @@ int main(int argc, char *argv[]) {
   fem_varden_flow::SlipBC slip_bed(V, V1, sub_domains, 2);
   fem_varden_flow::SlipBC slip_left(V, V1, sub_domains, 3);
   fem_varden_flow::SlipBC slip_top(V, V1, sub_domains, 5);
-  if (!noslip) {
+  if (!noslip)
+  {
     slip_bcs->insert(slip_bcs->end(), {&slip_ice, &slip_bed, &slip_left});
   }
   // now we use slip on the atmosphere boundary
@@ -346,10 +376,10 @@ int main(int argc, char *argv[]) {
 
   tic();
   fem_varden_flow::VD_NSESolver ns(mesh, *u_in, rho_in, p_in, T_in, S_in, f, f_u_source,
-                           f_T, f_S, f_source_T, f_reaction_T, f_source_S,
-                           f_reaction_S, bcu, bcp, bcrho, bcT, bcS, slip_bcs,
-                           slip_bc_marker, slip_bc_marker_fn, V, Q, M,
-                           solver_parameters, sub_domains, t, 0);
+                                   f_T, f_S, f_source_T, f_reaction_T, f_source_S,
+                                   f_reaction_S, bcu, bcp, bcrho, bcT, bcS, slip_bcs,
+                                   slip_bc_marker, slip_bc_marker_fn, V, Q, M,
+                                   solver_parameters, sub_domains, t, 0);
   log_info_once("Solver setup took %lf seconds", toc());
 
   S_bar = ns.get_S_bar();
@@ -358,9 +388,12 @@ int main(int argc, char *argv[]) {
   p_in->T_bar_ = T_bar;
 
   tstart = time(0);
-  if (checkpoint_restart_index <= 0) {
+  if (checkpoint_restart_index <= 0)
+  {
     ns.adaptive_solve();
-  } else {
+  }
+  else
+  {
     ns.adaptive_solve(checkpoint_restart_index);
   }
   tend = time(0);
